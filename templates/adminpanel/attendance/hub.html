@@ -1,0 +1,78 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Attendance{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h2 class="h5 mb-0">Attendance</h2>
+  <form method="get" action="{% url 'adminpanel:attendance' %}" class="d-flex gap-2 align-items-center" data-auto-filter>
+    <select class="form-select form-select-sm" style="width:180px" name="status" aria-label="Status">
+      <option value="">All statuses</option>
+      <option value="present" {% if status_filter == 'present' %}selected{% endif %}>Present</option>
+      <option value="absent" {% if status_filter == 'absent' %}selected{% endif %}>Absent</option>
+      <option value="late" {% if status_filter == 'late' %}selected{% endif %}>Active</option>
+    </select>
+    <a class="btn btn-outline-secondary btn-icon" href="{% url 'adminpanel:attendance' %}" data-reset-filter data-bs-toggle="tooltip" title="Reset filters"><i class="fas fa-rotate-left"></i></a>
+  </form>
+</div>
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="ap-card">
+      <h2 class="h6 mb-3">Classes{% if status_filter %} with {{ status_filter }}{% endif %}</h2>
+      {% for c in classes %}
+      <div class="d-flex justify-content-between border-bottom py-2 align-items-center gap-2">
+        <div>
+          <strong>{{ c.title }}</strong>
+          <div class="small text-muted">
+            {{ c.date|date:"M d, Y" }} · {{ c.start_time|time:"g:i A" }}
+            {% if c.attendance_count %}
+            <span class="text-success ms-1"><i class="fas fa-check-circle"></i> Marked ({{ c.attendance_count }})</span>
+            {% elif not c.can_mark_attendance %}
+            <span class="text-warning ms-1"><i class="fas fa-clock"></i> Opens after class ends</span>
+            {% endif %}
+          </div>
+        </div>
+        <div class="ap-actions">
+          {% if c.can_mark_attendance %}
+            {% if c.attendance_count %}
+            <a class="btn btn-success btn-icon" href="{% url 'adminpanel:attendance_mark' c.pk %}"
+               data-bs-toggle="tooltip" title="Attendance marked — edit"><i class="fas fa-clipboard-check"></i></a>
+            {% else %}
+            <a class="btn btn-outline-primary btn-icon" href="{% url 'adminpanel:attendance_mark' c.pk %}"
+               data-bs-toggle="tooltip" title="Mark attendance"><i class="fas fa-clipboard-check"></i></a>
+            {% endif %}
+          {% else %}
+            <span class="btn btn-outline-secondary btn-icon disabled" tabindex="-1" aria-disabled="true"
+                  data-bs-toggle="tooltip"
+                  title="Available after {{ c.datetime_end|date:'M d, g:i A' }}">
+              <i class="fas fa-clipboard-check"></i>
+            </span>
+          {% endif %}
+          <a class="btn btn-outline-secondary btn-icon" href="{% url 'adminpanel:attendance_export' c.pk %}"
+             data-bs-toggle="tooltip" title="Export"><i class="fas fa-download"></i></a>
+        </div>
+      </div>
+      {% empty %}<p class="text-muted">No classes.</p>{% endfor %}
+      {% include "components/pagination.html" %}
+    </div>
+  </div>
+  <div class="col-lg-5">
+    {% if status_filter %}
+    <div class="ap-card mb-3">
+      <h2 class="h6 mb-3">Records — {{ status_filter }}</h2>
+      {% for a in attendance_records %}
+      <div class="small border-bottom py-1 d-flex justify-content-between gap-2">
+        <span>{{ a.student.email|truncatechars:22 }} · {{ a.free_class.title|truncatechars:20 }}</span>
+        <span class="text-muted">{{ a.created_at|date:"M d" }}</span>
+      </div>
+      {% empty %}<p class="text-muted mb-0">No records.</p>{% endfor %}
+      {% if records_page %}{% include "components/pagination.html" with page_obj=records_page page_param="rpage" %}{% endif %}
+    </div>
+    {% endif %}
+    <div class="ap-card">
+      <h2 class="h6 mb-3">Top attendees</h2>
+      {% for p in top_attendees %}
+      <div class="small py-1 d-flex justify-content-between"><span>{{ p.user.email|truncatechars:22 }}</span><span>{{ p.consecutive_attendance }} streak · {{ p.attendance_percentage }}%</span></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

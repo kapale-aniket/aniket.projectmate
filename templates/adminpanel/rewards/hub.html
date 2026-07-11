@@ -1,0 +1,45 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Rewards{% endblock %}
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="ap-card mb-3">
+      <h2 class="h6">Bonus / deduct points</h2>
+      <form method="post" action="{% url 'adminpanel:bonus_points' %}">{% csrf_token %}
+        {% for field in bonus_form %}<div class="mb-2"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+        <button class="btn btn-ap btn-sm" type="submit">Apply</button>
+      </form>
+    </div>
+    <div class="ap-card mb-3">
+      <h2 class="h6">Add reward rule</h2>
+      <form method="post" action="{% url 'adminpanel:reward_rule_create' %}">{% csrf_token %}
+        {% for field in rule_form %}<div class="mb-2"><label class="form-label small">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+        <button class="btn btn-ap btn-sm" type="submit">Save rule</button>
+      </form>
+      <p class="small text-muted mt-2 mb-0">Examples: attend_class=+10, feedback_submitted=+5, referral_approved=+20, profile_completed=+10</p>
+    </div>
+    <form method="post" action="{% url 'adminpanel:reset_leaderboard' %}" onsubmit="return confirm('Reset all points?')">{% csrf_token %}
+      <button class="btn btn-outline-danger btn-sm w-100">Reset leaderboard</button>
+    </form>
+  </div>
+  <div class="col-lg-4">
+    <div class="ap-card mb-3">
+      <div class="d-flex justify-content-between"><h2 class="h6">Rules</h2><a href="{% url 'adminpanel:achievement_create' %}">Add badge</a></div>
+      {% for r in rules %}<div class="small py-1 d-flex justify-content-between"><span>{{ r.label }} ({{ r.code }})</span><strong>{{ r.points|stringformat:"+d" }}</strong></div>{% empty %}<p class="small text-muted">No custom rules yet — defaults from settings apply.</p>{% endfor %}
+    </div>
+    <div class="ap-card">
+      <h2 class="h6">Achievements / badges</h2>
+      {% for a in achievements %}
+      <div class="d-flex justify-content-between small py-1"><span><i class="fas {{ a.icon }}"></i> {{ a.title }} ({{ a.points_required }}pts)</span>
+        <a class="text-danger" href="{% url 'adminpanel:achievement_delete' a.pk %}">Remove</a></div>
+      {% empty %}<p class="small text-muted">None</p>{% endfor %}
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="ap-card">
+      <h2 class="h6">Leaderboard</h2>
+      <ol class="mb-0">{% for p in leaderboard %}<li class="small py-1">{{ p.user.email|truncatechars:24 }} — {{ p.reward_points }}</li>{% endfor %}</ol>
+    </div>
+  </div>
+</div>
+{% endblock %}

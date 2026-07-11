@@ -1,0 +1,48 @@
+{% extends "base/base.html" %}
+{% block title %}{{ course.title }} — Course{% endblock %}
+{% block content %}
+<section class="pm-section">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-8">
+        <div class="glass-card p-4 p-md-5 no-hover">
+          <span class="pm-badge warning">{{ course.get_technology_display }}</span>
+          <h1 class="display-font h2 mt-2">{{ course.title }}</h1>
+          <p class="lead text-muted">{{ course.short_description }}</p>
+          <div class="mb-4">{{ course.description|linebreaks }}</div>
+          <h2 class="h5">Curriculum</h2>
+          <div class="mb-4">{{ course.curriculum|linebreaks }}</div>
+          {% if course.feature_list %}
+          <h2 class="h5">Features</h2>
+          <ul>{% for f in course.feature_list %}<li>{{ f }}</li>{% endfor %}</ul>
+          {% endif %}
+          {% if course.prerequisites %}
+          <h2 class="h5">Prerequisites</h2>
+          <p>{{ course.prerequisites|linebreaks }}</p>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-lg-4">
+        <div class="glass-card p-4 no-hover sticky-top" style="top:calc(var(--pm-nav-h) + 1rem)">
+          <div class="h2 text-primary mb-1">₹{{ course.effective_price }}</div>
+          {% if course.discount_price %}<div class="small text-muted text-decoration-line-through mb-2">₹{{ course.price }}</div>{% endif %}
+          <p class="small text-muted">{{ course.duration_weeks }} weeks · {{ course.duration_hours }} hours</p>
+
+          {% if is_enrolled %}
+          <div class="alert alert-success small mb-0">
+            <strong>You’re registered!</strong>
+            Check your registered email for the session Meet link.
+          </div>
+          {% elif user.is_authenticated and register_form %}
+          <h2 class="h6 mb-2">Register for this course</h2>
+          {% url 'courses:enroll' course.slug as enroll_url %}
+          {% include "components/class_register_form.html" with form=register_form action_url=enroll_url submit_label="Register" %}
+          {% else %}
+          <a href="{% url 'accounts:trust' %}?next={{ request.path }}" class="btn btn-pm w-100">Sign in to register</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

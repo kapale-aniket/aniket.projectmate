@@ -1,0 +1,12 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Edit student{% endblock %}
+{% block content %}
+<div class="ap-card" style="max-width:720px">
+  <form method="post">{% csrf_token %}
+    <div class="row g-3">
+      {% for field in form %}<div class="col-md-6"><label class="form-label">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
+      <div class="col-12"><button class="btn btn-ap" type="submit">Save</button></div>
+    </div>
+  </form>
+</div>
+{% endblock %}

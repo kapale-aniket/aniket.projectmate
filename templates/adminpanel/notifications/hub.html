@@ -1,0 +1,46 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Notifications{% endblock %}
+{% block content %}
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="ap-card">
+      <h2 class="h6 mb-3">Send / schedule notification</h2>
+      <form method="post" action="{% url 'adminpanel:notification_send' %}">
+        {% csrf_token %}
+        {% for field in form %}
+        <div class="mb-3">
+          <label class="form-label">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+        </div>
+        {% endfor %}
+        <button class="btn btn-ap" type="submit">Send or schedule</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h2 class="h6 mb-0">Recent / scheduled</h2>
+      <form method="post" action="{% url 'adminpanel:notification_dispatch_due' %}">
+        {% csrf_token %}
+        <button class="btn btn-sm btn-outline-secondary" type="submit">Dispatch due now</button>
+      </form>
+    </div>
+    <div class="ap-card">
+      {% for n in scheduled %}
+      <div class="border-bottom py-2">
+        <strong>{{ n.title }}</strong>
+        <span class="badge text-bg-light border">{{ n.get_status_display }}</span>
+        <div class="small text-muted">
+          {{ n.get_audience_display }} · {{ n.get_channel_display }}
+          {% if n.scheduled_at %} · {{ n.scheduled_at|date:"M d H:i" }}{% endif %}
+          {% if n.sent_at %} · Sent {{ n.sent_at|date:"M d H:i" }}{% endif %}
+        </div>
+      </div>
+      {% empty %}
+      <p class="text-muted mb-0">No notifications yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% comment %}Shared feedback form fields — expects `form` in context.{% endcomment %}
+{% with has_workshops=form.free_class.field.queryset.exists %}
+<div class="pm-feedback-fields">
+  <div class="pm-feedback-fields__item">
+    <label class="form-label" for="{{ form.free_class.id_for_label }}">Workshop</label>
+    {% if has_workshops %}
+    {{ form.free_class }}
+    <div class="form-text">{{ form.free_class.help_text|default:"Only workshops you registered for (live or completed)." }}</div>
+    {% else %}
+    <div class="pm-feedback-empty-workshop" role="status">
+      <i class="fas fa-chalkboard-teacher" aria-hidden="true"></i>
+      <div>
+        <strong>No registered workshops available</strong>
+        <p>Register for a live or completed free class first, then you can leave feedback here.
+          <a href="{% url 'classes:list' %}">Browse free classes</a>
+        </p>
+      </div>
+    </div>
+    {# Keep field in DOM for form binding, but hide the broken empty select #}
+    <div class="d-none" aria-hidden="true">{{ form.free_class }}</div>
+    {% endif %}
+    {% for e in form.free_class.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+  </div>
+  <div class="pm-feedback-fields__item">
+    <span class="form-label d-block">Rating</span>
+    <div class="pm-star-rating" role="radiogroup" aria-label="Rating">
+      {% for radio in form.rating %}
+      <label class="pm-star-rating__option" title="{{ radio.choice_label }} star{% if radio.choice_label != '1' %}s{% endif %}">
+        {{ radio.tag }}
+        <i class="fas fa-star" aria-hidden="true"></i>
+        <span class="visually-hidden">{{ radio.choice_label }} star{% if radio.choice_label != '1' %}s{% endif %}</span>
+      </label>
+      {% endfor %}
+    </div>
+    {% for e in form.rating.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+  </div>
+  <div class="pm-feedback-fields__item">
+    <label class="form-label" for="{{ form.review.id_for_label }}">Review</label>
+    {{ form.review }}
+    <div class="pm-feedback-fields__meta">
+      <div class="form-text mb-0">{{ form.review.help_text }}</div>
+      <div class="form-text mb-0" data-pm-char-counter data-for="{{ form.review.id_for_label }}">0 / 100</div>
+    </div>
+    {% for e in form.review.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+  </div>
+  <div class="pm-feedback-fields__item pm-feedback-fields__item--last">
+    <label class="form-label" for="{{ form.suggestions.id_for_label }}">Suggestions</label>
+    {{ form.suggestions }}
+    {% for e in form.suggestions.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+  </div>
+</div>
+{% endwith %}

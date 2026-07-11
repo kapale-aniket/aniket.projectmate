@@ -1,0 +1,56 @@
+{% extends "base/base.html" %}
+{% block title %}Register — Aniket.ProjectMate{% endblock %}
+{% block content %}
+<section class="auth-shell">
+  <div class="container">
+    <div class="glass-card auth-card no-hover" style="max-width:520px">
+      <h1 class="h3 display-font mb-1">Join ProjectMate</h1>
+      <p class="text-muted mb-4">Create your free student account</p>
+      <form method="post">
+        {% csrf_token %}
+        {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+        {% if form.errors %}
+        <div class="alert alert-danger small">Please fix the errors below.</div>
+        {% endif %}
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">First name</label>
+            {{ form.first_name }}
+            {{ form.first_name.errors }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Last name</label>
+            {{ form.last_name }}
+          </div>
+          <div class="col-12">
+            <label class="form-label">Email</label>
+            {{ form.email }}
+            {{ form.email.errors }}
+          </div>
+          <div class="col-12">
+            <label class="form-label">Referral code (optional)</label>
+            {{ form.referral_code }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Password</label>
+            {{ form.password1 }}
+            {{ form.password1.errors }}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Confirm password</label>
+            {{ form.password2 }}
+            {{ form.password2.errors }}
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-pm w-100">Create account</button>
+          </div>
+        </div>
+      </form>
+      <p class="text-center small mt-3 mb-0">
+        Already have an account?
+        <a href="{% url 'accounts:login' %}{% if next %}?next={{ next|urlencode }}{% endif %}">Sign in</a>
+      </p>
+    </div>
+  </div>
+</section>
+{% endblock %}

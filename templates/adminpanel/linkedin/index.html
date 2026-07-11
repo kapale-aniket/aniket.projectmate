@@ -1,0 +1,96 @@
+{% extends "adminpanel/base.html" %}
+{% load static %}
+{% block page_title %}LinkedIn parsing{% endblock %}
+{% block extra_css %}<link href="{% static 'css/linkedin-admin.css' %}" rel="stylesheet">{% endblock %}
+{% block content %}
+{% include "adminpanel/linkedin/_nav.html" %}
+{% csrf_token %}
+<div id="liDashboard" data-poll-stats="1">
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <a href="{% url 'linkedin:jobs' %}" class="ap-card ap-stat text-decoration-none d-block">
+        <div class="num" id="liStatJobs">{{ stats.total_jobs|default:0 }}</div>
+        <div class="lbl">Jobs scraped</div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3">
+      <a href="{% url 'linkedin:connections' %}" class="ap-card ap-stat text-decoration-none d-block">
+        <div class="num" id="liStatConnections">{{ stats.connections_sent|default:0 }}</div>
+        <div class="lbl">Connections</div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3">
+      <a href="{% url 'linkedin:posts' %}" class="ap-card ap-stat text-decoration-none d-block">
+        <div class="num" id="liStatPosts">{{ stats.posts_scraped|default:0 }}</div>
+        <div class="lbl">Posts</div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="ap-card ap-stat">
+        <div class="num" id="liStatToday">{{ stats.today_records|default:0 }}</div>
+        <div class="lbl">Today</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3">
+    <div class="col-lg-8">
+      <div class="ap-card mb-3">
+        <h2 class="h6 mb-3">Quick start</h2>
+        <ol class="small text-muted mb-3 ps-3">
+          <li>Open <strong>Session</strong> and sign in to LinkedIn once.</li>
+          <li>Run Jobs, Connections, or Posts (Start / Pause / Resume / Show preview).</li>
+          <li>Tune defaults &amp; Excel format in <strong>Settings</strong>.</li>
+          <li>Merge, trash, and download from <strong>Output</strong>.</li>
+        </ol>
+        <div class="d-flex flex-wrap gap-2">
+          <a class="btn btn-ap btn-sm" href="{% url 'linkedin:session' %}"><i class="fas fa-key me-1"></i> Session</a>
+          <a class="btn btn-outline-primary btn-sm" href="{% url 'linkedin:jobs' %}"><i class="fas fa-briefcase me-1"></i> Jobs</a>
+          <a class="btn btn-outline-primary btn-sm" href="{% url 'linkedin:connections' %}"><i class="fas fa-user-plus me-1"></i> Connections</a>
+          <a class="btn btn-outline-primary btn-sm" href="{% url 'linkedin:posts' %}"><i class="fas fa-newspaper me-1"></i> Posts</a>
+          <a class="btn btn-outline-secondary btn-sm" href="{% url 'linkedin:settings' %}"><i class="fas fa-sliders me-1"></i> Settings</a>
+        </div>
+      </div>
+      <div class="ap-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h2 class="h6 mb-0">Recent activity</h2>
+          <a class="small" href="{% url 'linkedin:logs' %}">All logs</a>
+        </div>
+        <div id="liActivityList">
+          {% for a in activity %}
+          <div class="small border-bottom py-2">
+            <strong>{{ a.title }}</strong>
+            <div class="text-muted">{{ a.created_at|timesince }} ago</div>
+          </div>
+          {% empty %}
+          <p class="text-muted small mb-0">Nothing yet.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="ap-card">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h2 class="h6 mb-0">Live status</h2>
+          <span class="badge text-bg-secondary" id="liStatusBadge">{% if active_task %}{{ active_task.status }}{% else %}Idle{% endif %}</span>
+        </div>
+        <div class="small mb-2" id="liTaskMeta">
+          {% if active_task %}{{ active_task.get_task_type_display }} — {{ active_task.get_status_display }}{% else %}No scraper running.{% endif %}
+        </div>
+        <div class="progress mb-2" style="height:8px"><div class="progress-bar" id="liProgressBar" style="width:{{ task_status.progress_pct|default:0 }}%"></div></div>
+        <div class="d-flex gap-2">
+          {% if active_task and active_task.is_active %}
+          <button type="button" class="btn btn-outline-danger btn-sm" id="liStopTask">Stop</button>
+          <a class="btn btn-outline-secondary btn-sm" href="{{ task_status.task_url }}">Open scraper</a>
+          {% endif %}
+          <a class="btn btn-outline-secondary btn-sm" href="{% url 'linkedin:logs' %}">Logs</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/linkedin-admin.js' %}"></script>
+<script>PMLinkedIn.init({ apiBase: "{% url 'linkedin:home' %}", features: { dashboard: true } });</script>
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Email template{% endblock %}
+{% block content %}
+<div class="ap-card" style="max-width:760px">
+  <p class="text-muted small mb-3">Write plain text only. Click <strong>Generate HTML preview</strong> to see the email format, then save.</p>
+  <form method="post" id="emailTemplateForm">{% csrf_token %}
+    {% for field in form %}
+    <div class="mb-3 {% if field.field.widget.input_type == 'checkbox' %}form-check{% endif %}">
+      {% if field.field.widget.input_type == 'checkbox' %}
+        {{ field }}
+        <label class="form-check-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+      {% else %}
+        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+      {% endif %}
+      {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+      {% for error in field.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+    </div>
+    {% endfor %}
+    <div class="mb-3">
+      <button type="button"
+              class="btn btn-outline-secondary btn-sm"
+              hx-post="{% url 'adminpanel:email_preview' %}"
+              hx-target="#tplEmailPreview"
+              hx-swap="innerHTML"
+              hx-include="#emailTemplateForm [name=subject], #emailTemplateForm [name=body_text], #emailTemplateForm [name=csrfmiddlewaretoken]">
+        <i class="fas fa-eye me-1"></i> Generate HTML preview
+      </button>
+    </div>
+    <div id="tplEmailPreview" class="mb-3"></div>
+    <button class="btn btn-ap" type="submit">Save template</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% load static %}
+<nav class="pm-navbar navbar navbar-expand-lg">
+  <div class="container">
+    <a class="pm-brand navbar-brand" href="{% url 'core:home' %}" data-history-replace hx-boost="false">
+      {% if site_settings.logo %}
+        <img src="{{ site_settings.logo.url }}" alt="{{ SITE_NAME }}" height="36">
+      {% else %}
+        Aniket.<span>ProjectMate</span>
+      {% endif %}
+    </a>
+    <button class="navbar-toggler border-0"
+            type="button"
+            id="pmNavToggler"
+            aria-controls="pmNav"
+            aria-expanded="false"
+            aria-label="Open navigation"
+            hx-boost="false">
+      <i class="fas fa-bars pm-nav-icon pm-nav-icon--open" aria-hidden="true"></i>
+      <i class="fas fa-xmark pm-nav-icon pm-nav-icon--close" aria-hidden="true"></i>
+    </button>
+    <div class="collapse navbar-collapse" id="pmNav">
+      <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
+        <li class="nav-item"><a class="nav-link pm-nav-link" href="{% url 'core:home' %}" data-history-replace hx-boost="false">Home</a></li>
+        <li class="nav-item"><a class="nav-link pm-nav-link" href="{% url 'classes:list' %}">Free Classes</a></li>
+        <li class="nav-item"><a class="nav-link pm-nav-link" href="{% url 'courses:list' %}">Paid Classes</a></li>
+        <li class="nav-item"><a class="nav-link pm-nav-link" href="{% url 'core:project' %}">Project</a></li>
+        <li class="nav-item"><a class="nav-link pm-nav-link" href="{% url 'announcements:list' %}">Announcements</a></li>
+        <li class="nav-item"><a class="nav-link pm-nav-link" href="{% url 'feedback:create' %}">Feedback</a></li>
+        <li class="nav-item"><a class="nav-link pm-nav-link" href="{% url 'core:about' %}">About</a></li>
+        <li class="nav-item">
+          <button type="button"
+                  class="theme-toggle"
+                  id="themeToggle"
+                  data-theme-toggle
+                  data-theme-url="{% url 'core:theme_toggle' %}"
+                  aria-label="Toggle dark mode"
+                  title="Toggle theme"
+                  hx-boost="false">
+            <i class="fas {% if theme == 'dark' %}fa-sun{% else %}fa-moon{% endif %}" data-theme-icon></i>
+          </button>
+        </li>
+        {% if user.is_authenticated %}
+        <li class="nav-item">
+          <a class="nav-link pm-nav-link position-relative" href="{% url 'dashboard:notifications' %}" aria-label="Notifications">
+            <i class="fas fa-bell"></i>
+            {% if unread_notification_count %}
+            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:0.6rem">{{ unread_notification_count }}</span>
+            {% endif %}
+          </a>
+        </li>
+        <li class="nav-item"><a class="btn btn-pm btn-sm ms-lg-2" href="{% url 'dashboard:home' %}">Dashboard</a></li>
+        {% else %}
+        <li class="nav-item"><a class="nav-link pm-nav-link" href="{% url 'accounts:login' %}">Login</a></li>
+        <li class="nav-item"><a class="btn btn-pm btn-sm ms-lg-2" href="{% url 'accounts:register' %}">Register</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>

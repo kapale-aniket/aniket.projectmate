@@ -1,0 +1,207 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Content{% endblock %}
+{% block content %}
+<ul class="nav nav-pills gap-2 mb-3">
+  <li class="nav-item"><a class="nav-link {% if tab == 'announcements' %}active{% endif %}" href="?tab=announcements">Announcements</a></li>
+  <li class="nav-item"><a class="nav-link {% if tab == 'materials' %}active{% endif %}" href="?tab=materials">Materials</a></li>
+  <li class="nav-item"><a class="nav-link {% if tab == 'plans' %}active{% endif %}" href="?tab=plans">Project plans</a></li>
+  <li class="nav-item"><a class="nav-link {% if tab == 'notifications' %}active{% endif %}" href="?tab=notifications">Notifications</a></li>
+</ul>
+
+{% if tab == 'announcements' %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="h5 mb-0">Announcements</h2>
+  <button type="button" class="btn btn-ap btn-icon btn-icon-lg"
+          data-bs-toggle="tooltip" title="Create announcement"
+          hx-get="{% url 'adminpanel:announcement_create' %}"
+          hx-target="#apFormModalBody"
+          hx-swap="innerHTML"><i class="fas fa-plus"></i></button>
+</div>
+<div class="ap-card">
+{% for a in announcements %}
+<div class="d-flex justify-content-between align-items-start border-bottom py-3 gap-3">
+  <div>
+    <strong>{{ a.title }}</strong>
+    {% if a.is_pinned %}<span class="badge text-bg-warning">Pinned</span>{% endif %}
+    {% if a.is_live %}<span class="badge text-bg-success">Live</span>
+    {% elif a.scheduled_at %}<span class="badge text-bg-info">Scheduled</span>
+    {% else %}<span class="badge text-bg-secondary">Draft</span>{% endif %}
+    <div class="small text-muted mt-1">
+      {{ a.get_category_display }} · {{ a.created_at|date:"M d, Y" }}
+      {% if a.scheduled_at %} · Live {{ a.scheduled_at|date:"M d H:i" }}{% endif %}
+      {% if a.expires_at %} · Expires {{ a.expires_at|date:"M d H:i" }}{% endif %}
+    </div>
+  </div>
+  <div class="ap-actions">
+    <form method="post" action="{% url 'adminpanel:announcement_pin' a.pk %}">{% csrf_token %}
+      <button class="btn btn-outline-warning btn-icon" type="submit"
+              data-bs-toggle="tooltip" title="{% if a.is_pinned %}Unpin{% else %}Pin{% endif %}">
+        <i class="fas fa-thumbtack"></i>
+      </button>
+    </form>
+    <button type="button" class="btn btn-outline-primary btn-icon"
+            data-bs-toggle="tooltip" title="Edit"
+            hx-get="{% url 'adminpanel:announcement_edit' a.pk %}"
+            hx-target="#apFormModalBody"
+            hx-swap="innerHTML"><i class="fas fa-pen"></i></button>
+    <button type="button" class="btn btn-outline-danger btn-icon"
+            title="Delete"
+            data-bs-toggle="modal" data-bs-target="#apConfirmModal"
+            data-action="{% url 'adminpanel:announcement_delete' a.pk %}"
+            data-message="Delete announcement “{{ a.title }}”?"><i class="fas fa-trash"></i></button>
+  </div>
+</div>
+{% empty %}<p class="text-muted mb-0">No announcements yet.</p>{% endfor %}
+</div>
+{% include "components/pagination.html" %}
+
+{% elif tab == 'materials' %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="h5 mb-0">Course materials</h2>
+  <button type="button" class="btn btn-ap btn-icon btn-icon-lg"
+          data-bs-toggle="tooltip" title="Upload material"
+          hx-get="{% url 'adminpanel:material_create' %}"
+          hx-target="#apFormModalBody"
+          hx-swap="innerHTML"><i class="fas fa-upload"></i></button>
+</div>
+<div class="ap-card">
+{% for m in materials %}
+<div class="d-flex justify-content-between align-items-start border-bottom py-3 gap-3">
+  <div>
+    <strong>{{ m.title }}</strong>
+    <span class="badge text-bg-light border">{{ m.get_material_type_display }}</span>
+    {% if m.is_public %}<span class="badge text-bg-success">Public</span>{% else %}<span class="badge text-bg-secondary">Restricted</span>{% endif %}
+    <div class="small text-muted mt-1">
+      {% if m.course %}{{ m.course.title }}{% elif m.free_class %}{{ m.free_class.title }}{% else %}Unlinked{% endif %}
+      · <a href="{{ m.file.url }}" target="_blank" data-bs-toggle="tooltip" title="Download"><i class="fas fa-download"></i></a>
+    </div>
+  </div>
+  <button type="button" class="btn btn-outline-danger btn-icon"
+          title="Delete"
+          data-bs-toggle="modal" data-bs-target="#apConfirmModal"
+          data-action="{% url 'adminpanel:material_delete' m.pk %}"
+          data-message="Delete material “{{ m.title }}”?"><i class="fas fa-trash"></i></button>
+</div>
+{% empty %}<p class="text-muted mb-0">No materials yet.</p>{% endfor %}
+</div>
+{% include "components/pagination.html" %}
+
+{% elif tab == 'plans' %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h2 class="h5 mb-0">Project plans</h2>
+  <button type="button" class="btn btn-ap btn-icon btn-icon-lg"
+          data-bs-toggle="tooltip" title="Add plan"
+          hx-get="{% url 'adminpanel:project_plan_create' %}"
+          hx-target="#apFormModalBody"
+          hx-swap="innerHTML"><i class="fas fa-plus"></i></button>
+</div>
+<div class="ap-card mb-4">
+{% for p in project_plans %}
+<div class="d-flex justify-content-between align-items-start border-bottom py-3 gap-3">
+  <div>
+    <strong>{{ p.name }}</strong>
+    <span class="badge text-bg-light border ms-1">{{ p.display_price }}</span>
+    {% if p.badge %}<span class="badge text-bg-warning">{{ p.badge }}</span>{% endif %}
+    {% if p.is_highlighted %}<span class="badge text-bg-primary">Highlighted</span>{% endif %}
+    {% if p.is_active %}<span class="badge text-bg-success">Active</span>
+    {% else %}<span class="badge text-bg-secondary">Hidden</span>{% endif %}
+    {% if p.tagline %}<div class="small text-muted mt-1">{{ p.tagline }}</div>{% endif %}
+  </div>
+  <div class="ap-actions">
+    <button type="button" class="btn btn-outline-primary btn-icon"
+            data-bs-toggle="tooltip" title="Edit"
+            hx-get="{% url 'adminpanel:project_plan_edit' p.pk %}"
+            hx-target="#apFormModalBody"
+            hx-swap="innerHTML"><i class="fas fa-pen"></i></button>
+    <button type="button" class="btn btn-outline-danger btn-icon"
+            title="Delete"
+            data-bs-toggle="modal" data-bs-target="#apConfirmModal"
+            data-action="{% url 'adminpanel:project_plan_delete' p.pk %}"
+            data-message="Delete plan “{{ p.name }}”?"><i class="fas fa-trash"></i></button>
+  </div>
+</div>
+{% empty %}<p class="text-muted mb-0">No project plans yet.</p>{% endfor %}
+</div>
+{% include "components/pagination.html" %}
+
+<div class="d-flex justify-content-between align-items-center mb-3 mt-2">
+  <div>
+    <h2 class="h5 mb-0">Included with every project</h2>
+    <p class="small text-muted mb-0">Shown under the plans on the public Project page.</p>
+  </div>
+  <button type="button" class="btn btn-ap btn-icon btn-icon-lg"
+          data-bs-toggle="tooltip" title="Add perk"
+          hx-get="{% url 'adminpanel:project_perk_create' %}"
+          hx-target="#apFormModalBody"
+          hx-swap="innerHTML"><i class="fas fa-plus"></i></button>
+</div>
+<div class="ap-card">
+{% for perk in project_perks %}
+<div class="d-flex justify-content-between align-items-center border-bottom py-3 gap-3">
+  <div>
+    <i class="{{ perk.icon|default:'fas fa-check' }} me-2 text-muted"></i>
+    <strong>{{ perk.title }}</strong>
+    {% if perk.is_active %}<span class="badge text-bg-success ms-1">Active</span>
+    {% else %}<span class="badge text-bg-secondary ms-1">Hidden</span>{% endif %}
+  </div>
+  <div class="ap-actions">
+    <button type="button" class="btn btn-outline-primary btn-icon"
+            data-bs-toggle="tooltip" title="Edit"
+            hx-get="{% url 'adminpanel:project_perk_edit' perk.pk %}"
+            hx-target="#apFormModalBody"
+            hx-swap="innerHTML"><i class="fas fa-pen"></i></button>
+    <button type="button" class="btn btn-outline-danger btn-icon"
+            title="Delete"
+            data-bs-toggle="modal" data-bs-target="#apConfirmModal"
+            data-action="{% url 'adminpanel:project_perk_delete' perk.pk %}"
+            data-message="Delete perk “{{ perk.title }}”?"><i class="fas fa-trash"></i></button>
+  </div>
+</div>
+{% empty %}<p class="text-muted mb-0">No shared perks yet.</p>{% endfor %}
+</div>
+
+{% else %}
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="ap-card">
+      <h2 class="h6 mb-3">Send / schedule notification</h2>
+      <form method="post" action="{% url 'adminpanel:notification_send' %}">
+        {% csrf_token %}
+        {% for field in notification_form %}
+        <div class="mb-3">
+          <label class="form-label">{{ field.label }}</label>
+          {{ field }}
+          {% if field.help_text %}<div class="form-text">{{ field.help_text }}</div>{% endif %}
+        </div>
+        {% endfor %}
+        <button class="btn btn-ap btn-icon btn-icon-lg" type="submit" data-bs-toggle="tooltip" title="Send or schedule">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h2 class="h6 mb-0">Recent / scheduled</h2>
+      <form method="post" action="{% url 'adminpanel:notification_dispatch_due' %}">{% csrf_token %}
+        <button class="btn btn-outline-secondary btn-icon" type="submit" data-bs-toggle="tooltip" title="Dispatch due now">
+          <i class="fas fa-bolt"></i>
+        </button>
+      </form>
+    </div>
+    <div class="ap-card">
+      {% for n in scheduled %}
+      <div class="border-bottom py-2">
+        <strong>{{ n.title }}</strong>
+        <span class="badge text-bg-light border">{{ n.get_status_display }}</span>
+        <div class="small text-muted">{{ n.get_audience_display }} · {{ n.get_channel_display }}
+          {% if n.scheduled_at %} · {{ n.scheduled_at|date:"M d H:i" }}{% endif %}
+        </div>
+      </div>
+      {% empty %}<p class="text-muted mb-0">No notifications yet.</p>{% endfor %}
+    </div>
+    {% include "components/pagination.html" %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base/base.html" %}
+{% block title %}Rewards — Dashboard{% endblock %}
+{% block content %}
+<section class="pm-section"><div class="container"><div class="row g-4">
+  <div class="col-lg-3">{% include "dashboard/sidebar.html" %}</div>
+  <div class="col-lg-9" id="dash-content">
+    <h1 class="h3 display-font mb-2">Rewards & Leaderboard</h1>
+    <p class="text-muted">Level {{ profile.level }} · {{ profile.reward_points }} points</p>
+    <div class="progress-pm mb-4" style="max-width:320px"><span style="width:{% widthratio profile.reward_points|add:0 500 100 %}%"></span></div>
+    <div class="row g-4">
+      <div class="col-md-6">
+        <div class="glass-card p-4 no-hover">
+          <h2 class="h5 mb-3">Your points</h2>
+          {% for r in rewards %}
+          <div class="d-flex justify-content-between py-2 border-bottom small" style="border-color:var(--pm-border)!important">
+            <span>{{ r.description|default:r.get_reason_display }}</span>
+            <strong class="{% if r.points > 0 %}text-success{% else %}text-danger{% endif %}">{{ r.points|stringformat:"+d" }}</strong>
+          </div>
+          {% empty %}<p class="text-muted small">No rewards yet.</p>{% endfor %}
+          {% include "components/pagination.html" %}
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="glass-card p-4 no-hover">
+          <h2 class="h5 mb-3">Leaderboard · Top 10</h2>
+          <ol class="list-group list-group-numbered list-group-flush">
+            {% for p in leaderboard %}
+            <li class="list-group-item bg-transparent d-flex justify-content-between" style="color:var(--pm-text);border-color:var(--pm-border)">
+              <span>{{ p.user.get_full_name|default:p.user.email|truncatechars:20 }}</span>
+              <strong>{{ p.reward_points }}</strong>
+            </li>
+            {% endfor %}
+          </ol>
+        </div>
+      </div>
+      <div class="col-12">
+        <div class="glass-card p-4 no-hover">
+          <h2 class="h5 mb-3">Achievements</h2>
+          <div class="d-flex flex-wrap gap-2">
+            {% for sa in achievements %}
+            <div class="pm-badge p-2"><i class="fas {{ sa.achievement.icon }} me-1"></i> {{ sa.achievement.title }}</div>
+            {% empty %}<p class="text-muted small mb-0">Keep learning to unlock badges.</p>{% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div></div></section>
+{% endblock %}

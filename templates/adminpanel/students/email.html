@@ -1,0 +1,43 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Email student{% endblock %}
+{% block content %}
+<div class="ap-card" style="max-width:760px">
+  <p class="mb-1">To: <strong>{{ profile.user.email }}</strong></p>
+  <p class="text-muted small mb-3">Write plain text only. Generate the HTML preview, confirm it looks right, then send.</p>
+  <form method="post" id="studentEmailForm">{% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.subject.id_for_label }}">Subject</label>
+      {{ form.subject }}
+      {% for e in form.subject.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.body_text.id_for_label }}">Message (plain text)</label>
+      {{ form.body_text }}
+      {% if form.body_text.help_text %}<div class="form-text">{{ form.body_text.help_text }}</div>{% endif %}
+      {% for e in form.body_text.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+    </div>
+    {{ form.audience.as_hidden }}{{ form.student_ids.as_hidden }}
+
+    <div class="mb-3">
+      <button type="button"
+              class="btn btn-outline-secondary"
+              hx-post="{% url 'adminpanel:email_preview' %}"
+              hx-target="#studentEmailPreview"
+              hx-swap="innerHTML"
+              hx-include="#studentEmailForm [name=subject], #studentEmailForm [name=body_text], #studentEmailForm [name=csrfmiddlewaretoken]">
+        <i class="fas fa-eye me-1"></i> Generate HTML preview
+      </button>
+    </div>
+    <div id="studentEmailPreview" class="mb-3"></div>
+
+    <div class="form-check mb-3">
+      {{ form.preview_confirmed }}
+      <label class="form-check-label" for="{{ form.preview_confirmed.id_for_label }}">{{ form.preview_confirmed.label }}</label>
+      {% for e in form.preview_confirmed.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+    </div>
+    <button class="btn btn-ap" type="submit" id="emailSendBtn" disabled>
+      <i class="fas fa-paper-plane me-1"></i> Send email
+    </button>
+  </form>
+</div>
+{% endblock %}

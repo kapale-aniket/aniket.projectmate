@@ -1,0 +1,81 @@
+{
+  "sheet_title": "LinkedIn Hiring Posts (Freshers / Interns)",
+  "sheet_name": "Hiring Posts",
+  "watermark_text": "aniket.projectmate",
+  "style": {
+    "header_bg": "1F4E79",
+    "header_font_color": "FFFFFF",
+    "header_font_size": 11,
+    "title_font_size": 16,
+    "title_color": "1F4E79",
+    "section_bg": "D6E4F0",
+    "section_font_color": "1F4E79",
+    "banner_bg": "1F4E79",
+    "banner_font_color": "FFFFFF",
+    "alternate_row_bg": "F2F7FB",
+    "border_color": "D9D9D9",
+    "link_color": "0563C1",
+    "yes_color": "2E7D32",
+    "row_height": 22,
+    "header_row_height": 28,
+    "title_row_height": 36,
+    "freeze_panes_row": 2
+  },
+  "layout": {},
+  "columns": [
+    {
+      "key": "sr_no",
+      "header": "Sr No",
+      "width": 7,
+      "visible": true
+    },
+    {
+      "key": "post_url",
+      "header": "Post URL",
+      "width": 45,
+      "visible": true
+    },
+    {
+      "key": "apply_link",
+      "header": "Apply Link",
+      "width": 45,
+      "visible": true
+    },
+    {
+      "key": "company_name",
+      "header": "Company Name",
+      "width": 24,
+      "visible": true
+    },
+    {
+      "key": "job_role",
+      "header": "Job Role",
+      "width": 28,
+      "visible": true
+    },
+    {
+      "key": "company_size",
+      "header": "Company Size",
+      "width": 18,
+      "visible": true
+    },
+    {
+      "key": "package_lpa",
+      "header": "Package (LPA)",
+      "width": 14,
+      "visible": true
+    },
+    {
+      "key": "description",
+      "header": "Description",
+      "width": 60,
+      "visible": true
+    },
+    {
+      "key": "post_id",
+      "header": "Post ID",
+      "width": 22,
+      "visible": true
+    }
+  ]
+}

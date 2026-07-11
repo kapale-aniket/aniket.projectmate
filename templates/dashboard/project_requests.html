@@ -1,0 +1,79 @@
+{% extends "base/base.html" %}
+{% block title %}Project requests — Dashboard{% endblock %}
+{% block content %}
+<section class="pm-section">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-3">{% include "dashboard/sidebar.html" %}</div>
+      <div class="col-lg-9" id="dash-content">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div>
+            <h1 class="h3 display-font mb-1">Project requests</h1>
+            <p class="text-muted small mb-0">Track the status of ideas you submitted on the Project page.</p>
+          </div>
+          <a href="{% url 'core:project' %}" class="btn btn-pm btn-sm">
+            <i class="fas fa-plus me-1"></i> New project idea
+          </a>
+        </div>
+
+        <div class="glass-card p-4 no-hover">
+          <div class="table-responsive">
+            <table class="table table-pm mb-0">
+              <thead>
+                <tr>
+                  <th>Project</th>
+                  <th>Plan</th>
+                  <th>Status</th>
+                  <th>Submitted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in project_requests %}
+                <tr>
+                  <td>
+                    <strong>{{ item.project_title }}</strong>
+                    {% if item.tech_stack %}
+                    <div class="small text-muted">{{ item.tech_stack }}</div>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.selected_plan %}
+                    {{ item.selected_plan.name }}
+                    <div class="small text-muted">{{ item.selected_plan.display_price }}</div>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if item.status == 'new' %}
+                    <span class="pm-badge warning">{{ item.get_status_display }}</span>
+                    {% elif item.status == 'reviewing' %}
+                    <span class="pm-badge">{{ item.get_status_display }}</span>
+                    {% elif item.status == 'contacted' %}
+                    <span class="pm-badge" style="background:rgba(37,99,235,.12);color:#2563eb">{{ item.get_status_display }}</span>
+                    {% elif item.status == 'done' %}
+                    <span class="pm-badge" style="background:rgba(16,185,129,.15);color:#059669">{{ item.get_status_display }}</span>
+                    {% else %}
+                    <span class="pm-badge">{{ item.get_status_display }}</span>
+                    {% endif %}
+                  </td>
+                  <td>{{ item.created_at|date:"M d, Y" }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4" class="pm-table-empty">
+                    No project requests yet.
+                    <a href="{% url 'core:project' %}">Share your idea</a> to get started.
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% include "components/pagination.html" %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

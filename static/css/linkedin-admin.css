@@ -1,0 +1,146 @@
+/* LinkedIn admin hub — ProjectMate navy theme */
+.ap-linkedin-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  background: var(--ap-card-bg, #fff);
+  border: 1px solid var(--ap-border, #e2e8f0);
+  border-radius: 0.85rem;
+}
+.ap-linkedin-nav a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.55rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ap-text-muted, #64748b);
+  text-decoration: none;
+}
+.ap-linkedin-nav a:hover,
+.ap-linkedin-nav a.active {
+  background: rgba(26, 54, 93, 0.1);
+  color: var(--ap-primary, #1a365d);
+}
+[data-theme="dark"] .ap-linkedin-nav a:hover,
+[data-theme="dark"] .ap-linkedin-nav a.active {
+  background: rgba(157, 180, 209, 0.15);
+  color: #e2ecf8;
+}
+.ap-linkedin-nav a i { width: 1rem; text-align: center; }
+
+.li-log {
+  background: #0f2744;
+  color: #d7e3f4;
+  border-radius: 0.75rem;
+  padding: 0.85rem 1rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  min-height: 180px;
+  max-height: 420px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+[data-theme="dark"] .li-log {
+  background: #071018;
+  border: 1px solid #243247;
+}
+.li-log-line { margin-bottom: 0.25rem; }
+.li-log-error { color: #fca5a5; }
+.li-log-success { color: #86efac; }
+.li-log-warning { color: #fde68a; }
+
+.li-action-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+.li-action-grid .btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.55rem 0.25rem;
+}
+.li-action-grid .btn i { font-size: 1rem; }
+@media (max-width: 576px) {
+  .li-action-grid { grid-template-columns: repeat(3, 1fr); }
+}
+
+.li-preview-frame {
+  background: var(--ap-bg-soft, #e8eef5);
+  border-radius: 0.65rem;
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.li-preview-frame img {
+  max-width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+}
+
+.li-file-list { max-height: 480px; overflow: auto; }
+.li-file-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.65rem 0.35rem;
+  border-bottom: 1px solid var(--ap-border, #e2e8f0);
+}
+.li-file-row.active { background: rgba(26, 54, 93, 0.06); border-radius: 0.4rem; }
+[data-theme="dark"] .li-file-row.active { background: rgba(157, 180, 209, 0.12); }
+
+.li-checklist { max-height: 220px; overflow: auto; }
+.li-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0;
+  font-size: 0.82rem;
+  border-bottom: 1px solid var(--ap-border, #edf2f7);
+}
+.li-checklist-done { color: #166534; }
+.li-checklist-active { color: var(--ap-primary, #1a365d); font-weight: 600; }
+[data-theme="dark"] .li-checklist-done { color: #86efac; }
+[data-theme="dark"] .li-checklist-active { color: #c4d4e8; }
+
+.pm-excel-columns-list { display: flex; flex-direction: column; gap: 0.4rem; }
+.pm-excel-column-row {
+  display: grid;
+  grid-template-columns: auto 1fr 70px 90px auto;
+  gap: 0.35rem;
+  align-items: center;
+}
+.pm-excel-col-key { font-size: 0.7rem; color: var(--ap-text-muted, #64748b); overflow: hidden; text-overflow: ellipsis; }
+.pm-excel-col-actions { display: flex; gap: 0.15rem; }
+.pm-excel-col-btn {
+  border: 1px solid var(--ap-border, #e2e8f0);
+  background: var(--ap-card-bg, #fff);
+  color: var(--ap-text, #0f172a);
+  border-radius: 0.35rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.ap-stat .num { color: var(--ap-stat-num, #1a365d); }
+.ap-stat .lbl { color: var(--ap-text-muted, #64748b); }
+
+#liScraperForm .form-control,
+#liScraperForm textarea,
+#liScraperForm input[type="number"],
+#liSettingsForm .form-control {
+  border-radius: 0.65rem;
+}

@@ -1,0 +1,49 @@
+<aside class="dash-sidebar">
+  <div class="dash-sidebar__user">
+    <div class="dash-sidebar__avatar" aria-hidden="true">
+      {% if user.profile.profile_picture %}
+      <img src="{{ user.profile.profile_picture.url }}" alt="" width="46" height="46">
+      {% else %}
+      <span>{{ user.first_name|default:user.email|slice:":1"|upper }}{{ user.last_name|default:""|slice:":1"|upper }}</span>
+      {% endif %}
+    </div>
+    <div class="dash-sidebar__meta">
+      <strong class="dash-sidebar__name">{{ user.get_full_name|default:user.email }}</strong>
+      <span class="dash-sidebar__email">{{ user.email }}</span>
+    </div>
+  </div>
+
+  {% if user.profile %}
+  <div class="dash-sidebar__chips">
+    <span class="dash-chip"><i class="fas fa-layer-group" aria-hidden="true"></i> Lv {{ user.profile.level }}</span>
+    <span class="dash-chip dash-chip--gold"><i class="fas fa-coins" aria-hidden="true"></i> {{ user.profile.reward_points }}</span>
+  </div>
+  {% endif %}
+
+  <nav class="dash-nav" data-dash-nav aria-label="Dashboard">
+    <p class="dash-nav__label">Learn</p>
+    <a href="{% url 'dashboard:home' %}#dash-content" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}"><i class="fas fa-home"></i> Overview</a>
+    <a href="{% url 'dashboard:classes' %}#dash-content" class="{% if request.resolver_match.url_name == 'classes' %}active{% endif %}"><i class="fas fa-chalkboard"></i> My Classes</a>
+    <a href="{% url 'dashboard:attendance' %}#dash-content" class="{% if request.resolver_match.url_name == 'attendance' %}active{% endif %}"><i class="fas fa-calendar-check"></i> Attendance</a>
+    <a href="{% url 'dashboard:project_requests' %}#dash-content" class="{% if request.resolver_match.url_name == 'project_requests' %}active{% endif %}"><i class="fas fa-flask"></i> Project requests</a>
+
+    <p class="dash-nav__label">Grow</p>
+    <a href="{% url 'dashboard:rewards' %}#dash-content" class="{% if request.resolver_match.url_name == 'rewards' %}active{% endif %}"><i class="fas fa-trophy"></i> Rewards</a>
+    <a href="{% url 'dashboard:referrals' %}#dash-content" class="{% if request.resolver_match.url_name == 'referrals' %}active{% endif %}"><i class="fas fa-share-nodes"></i> Referrals</a>
+    <a href="{% url 'dashboard:resume' %}#dash-content" class="{% if request.resolver_match.url_name == 'resume' %}active{% endif %}"><i class="fas fa-file-alt"></i> Resume Review</a>
+    <a href="{% url 'dashboard:my_feedbacks' %}#dash-content" class="{% if request.resolver_match.url_name == 'my_feedbacks' %}active{% endif %}"><i class="fas fa-comment-dots"></i> My feedbacks</a>
+
+    <p class="dash-nav__label">Account</p>
+    <a href="{% url 'dashboard:profile' %}#dash-content" class="{% if request.resolver_match.url_name == 'profile' %}active{% endif %}"><i class="fas fa-user"></i> Profile</a>
+    <a href="{% url 'dashboard:notifications' %}#dash-content" class="{% if request.resolver_match.url_name == 'notifications' %}active{% endif %}">
+      <i class="fas fa-bell"></i> Notifications
+      {% if unread_notification_count %}
+      <span class="dash-nav__count">{{ unread_notification_count }}</span>
+      {% endif %}
+    </a>
+    <form method="post" action="{% url 'accounts:logout' %}" class="dash-nav__logout">
+      {% csrf_token %}
+      <button type="submit"><i class="fas fa-sign-out-alt"></i> Logout</button>
+    </form>
+  </nav>
+</aside>

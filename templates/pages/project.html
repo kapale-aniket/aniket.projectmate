@@ -1,0 +1,299 @@
+{% extends "base/base.html" %}
+{% block title %}Custom Projects — Aniket.ProjectMate{% endblock %}
+{% block meta_description %}Share your project idea — we customize and build it with you in real time. Trusted mentor-led project support for students.{% endblock %}
+
+{% block content %}
+<section class="pm-project-hero">
+  <div class="pm-project-hero__glow pm-project-hero__glow--a" aria-hidden="true"></div>
+  <div class="pm-project-hero__glow pm-project-hero__glow--b" aria-hidden="true"></div>
+  <div class="container">
+    <div class="pm-project-hero__grid">
+      <div class="pm-project-hero__inner reveal">
+        <p class="pm-project-hero__eyebrow"><i class="fas fa-flask" aria-hidden="true"></i> Project studio</p>
+        <h1 class="pm-project-hero__title">Your idea.<br><em>We customize it</em><span> — for real.</span></h1>
+        <p class="pm-project-hero__lead">
+          Bring the concept. We shape the architecture, polish the features, and walk with you until your project feels viva-ready and production-honest.
+        </p>
+        <div class="pm-project-hero__cta">
+          <a href="#project-form" class="btn btn-pm btn-pm-glow">Share your idea</a>
+          <a href="#how-it-works" class="btn btn-pm-ghost">How it works</a>
+        </div>
+        <ul class="pm-project-trust" aria-label="Trust signals">
+          <li><i class="fas fa-shield-alt" aria-hidden="true"></i> Transparent process</li>
+          <li><i class="fas fa-comments" aria-hidden="true"></i> Direct mentor feedback</li>
+          <li><i class="fas fa-code" aria-hidden="true"></i> Real, explainable code</li>
+        </ul>
+      </div>
+
+      <div class="pm-project-hero__visual reveal" aria-hidden="true">
+        <div class="pm-project-stage">
+          <span class="pm-project-emoji pm-project-emoji--1">💡</span>
+          <span class="pm-project-emoji pm-project-emoji--2">🎓</span>
+          <span class="pm-project-emoji pm-project-emoji--3">⚙️</span>
+          <span class="pm-project-emoji pm-project-emoji--4">📱</span>
+          <span class="pm-project-emoji pm-project-emoji--5">✨</span>
+          <span class="pm-project-emoji pm-project-emoji--6">🚀</span>
+
+          <div class="pm-project-bubble pm-project-bubble--right">
+            <span class="pm-project-bubble__shine" aria-hidden="true"></span>
+            <span class="pm-project-bubble__icon">🎤</span>
+            <p>You present</p>
+          </div>
+          <div class="pm-project-bubble pm-project-bubble--left">
+            <span class="pm-project-bubble__shine" aria-hidden="true"></span>
+            <span class="pm-project-bubble__icon">✨</span>
+            <p>Demo ready</p>
+          </div>
+
+          <div class="pm-project-bubble pm-project-bubble--idea">
+            <span class="pm-project-bubble__shine" aria-hidden="true"></span>
+            <span class="pm-project-bubble__icon">💡</span>
+            <span class="pm-project-stage__label">Your idea</span>
+            <p>Attendance app for my college…</p>
+          </div>
+          <div class="pm-project-stage__arrow"><i class="fas fa-arrow-down"></i></div>
+          <div class="pm-project-bubble pm-project-bubble--build">
+            <span class="pm-project-bubble__shine" aria-hidden="true"></span>
+            <span class="pm-project-bubble__icon">🛠️</span>
+            <span class="pm-project-stage__label">We customize</span>
+            <ul>
+              <li>Auth &amp; roles</li>
+              <li>Live modules</li>
+              <li>Demo-ready UI</li>
+            </ul>
+          </div>
+          <div class="pm-project-stage__badge"><i class="fas fa-check"></i> Viva-ready</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pm-section pm-project-promise" id="how-it-works">
+  <div class="pm-project-promise__orb pm-project-promise__orb--a" aria-hidden="true"></div>
+  <div class="pm-project-promise__orb pm-project-promise__orb--b" aria-hidden="true"></div>
+  <div class="pm-project-promise__grid" aria-hidden="true"></div>
+  <div class="container">
+    <div class="pm-project-promise__head reveal">
+      <span class="section-eyebrow">The promise</span>
+      <h2 class="pm-project-promise__title">Not a dump of files — a project you can own</h2>
+      <p class="pm-project-promise__lead">Three clear steps from rough notes to a confident presentation.</p>
+      <div class="pm-project-promise__flow" aria-hidden="true">
+        <span>Rough notes</span>
+        <i class="fas fa-arrow-right"></i>
+        <span>Custom build</span>
+        <i class="fas fa-arrow-right"></i>
+        <span>Confident viva</span>
+      </div>
+    </div>
+
+    <div class="pm-project-journey">
+      <article class="pm-project-journey__step pm-project-journey__step--1 reveal">
+        <span class="pm-project-journey__watermark" aria-hidden="true">01</span>
+        <div class="pm-project-journey__icon" aria-hidden="true"><i class="fas fa-lightbulb"></i></div>
+        <span class="pm-project-journey__num">01</span>
+        <h3>You share the idea</h3>
+        <p>Title, goal, college context, and any tech you prefer. Rough notes are fine.</p>
+        <ul class="pm-project-journey__tags">
+          <li>Title</li>
+          <li>Goal</li>
+          <li>Tech</li>
+        </ul>
+      </article>
+      <div class="pm-project-journey__connector" aria-hidden="true">
+        <span class="pm-project-journey__dot"></span>
+        <span class="pm-project-journey__line"></span>
+        <span class="pm-project-journey__dot"></span>
+      </div>
+      <article class="pm-project-journey__step pm-project-journey__step--2 reveal">
+        <span class="pm-project-journey__watermark" aria-hidden="true">02</span>
+        <div class="pm-project-journey__icon" aria-hidden="true"><i class="fas fa-drafting-compass"></i></div>
+        <span class="pm-project-journey__num">02</span>
+        <h3>We customize together</h3>
+        <p>Scope, modules, and UI decisions — shaped so you understand every piece.</p>
+        <ul class="pm-project-journey__tags">
+          <li>Scope</li>
+          <li>Modules</li>
+          <li>UI</li>
+        </ul>
+      </article>
+      <div class="pm-project-journey__connector" aria-hidden="true">
+        <span class="pm-project-journey__dot"></span>
+        <span class="pm-project-journey__line"></span>
+        <span class="pm-project-journey__dot"></span>
+      </div>
+      <article class="pm-project-journey__step pm-project-journey__step--3 reveal">
+        <span class="pm-project-journey__watermark" aria-hidden="true">03</span>
+        <div class="pm-project-journey__icon" aria-hidden="true"><i class="fas fa-graduation-cap"></i></div>
+        <span class="pm-project-journey__num">03</span>
+        <h3>You present with confidence</h3>
+        <p>Clean structure, demo flow, and guidance so viva questions don’t surprise you.</p>
+        <ul class="pm-project-journey__tags">
+          <li>Demo</li>
+          <li>Viva</li>
+          <li>Clarity</li>
+        </ul>
+      </article>
+    </div>
+
+    <p class="pm-project-promise__note reveal">
+      <i class="fas fa-hand-holding-heart" aria-hidden="true"></i>
+      You stay in the driver’s seat — we build beside you, not instead of you.
+    </p>
+  </div>
+</section>
+
+<section class="pm-section pm-project-form-section" id="project-form">
+  <div class="container">
+    <div class="pm-project-form-grid reveal">
+      <div class="pm-project-form-aside">
+        <span class="pm-project-form-aside__eyebrow">Start here</span>
+        <h2 class="pm-project-form-aside__title">Tell us your project idea</h2>
+        <p class="pm-project-form-aside__lead">
+          Select a plan below first — then fill this form. We’ll review and reach out to customize with you.
+        </p>
+        <p class="pm-project-form-aside__selected" data-selected-plan-label hidden>
+          <i class="fas fa-check-circle" aria-hidden="true"></i>
+          Selected: <strong data-selected-plan-name></strong>
+          <a href="#project-plans" class="pm-project-form-aside__change">Change</a>
+        </p>
+        <ul class="pm-project-form-aside__points">
+          <li><i class="fas fa-check" aria-hidden="true"></i> Idea stays yours</li>
+          <li><i class="fas fa-check" aria-hidden="true"></i> Honest timelines</li>
+          <li><i class="fas fa-check" aria-hidden="true"></i> Mentor-led guidance</li>
+        </ul>
+        {% if site_settings.contact_email %}
+        <p class="pm-project-form-aside__mail">
+          Prefer email?
+          <a href="mailto:{{ site_settings.contact_email }}">{{ site_settings.contact_email }}</a>
+        </p>
+        {% endif %}
+        {% if site_settings.whatsapp_url %}
+        <a href="{{ site_settings.whatsapp_url }}" class="pm-project-wa" target="_blank" rel="noopener">
+          <i class="fab fa-whatsapp" aria-hidden="true"></i> Chat on WhatsApp
+        </a>
+        {% endif %}
+      </div>
+
+      <form method="post" action="{% url 'core:project' %}" class="pm-project-form is-locked" hx-boost="false" data-project-idea-form>
+        {% csrf_token %}
+        {{ form.selected_plan }}
+        {% if form.selected_plan.errors %}
+        <div class="alert alert-warning small">{{ form.selected_plan.errors|striptags }}</div>
+        {% endif %}
+        {% if form.errors and not form.selected_plan.errors %}
+        <div class="alert alert-danger small">Please fix the highlighted fields and try again.</div>
+        {% endif %}
+        <div class="pm-project-form__lock" data-form-lock aria-hidden="true">
+          <i class="fas fa-lock" aria-hidden="true"></i>
+          <p>Select a plan below first, then fill your info here.</p>
+          <a href="#project-plans" class="btn btn-pm-ghost btn-sm">Go to plans</a>
+        </div>
+        <div class="pm-project-form__fields">
+          <div class="pm-project-form__field">
+            <label class="form-label" for="{{ form.name.id_for_label }}">Name</label>
+            {{ form.name }}
+            {{ form.name.errors }}
+          </div>
+          <div class="pm-project-form__field">
+            <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
+            {{ form.email }}
+            {{ form.email.errors }}
+          </div>
+          <div class="pm-project-form__field">
+            <label class="form-label" for="{{ form.phone.id_for_label }}">Phone</label>
+            {{ form.phone }}
+          </div>
+          <div class="pm-project-form__field">
+            <label class="form-label" for="{{ form.college.id_for_label }}">College</label>
+            {{ form.college }}
+          </div>
+          <div class="pm-project-form__field pm-project-form__field--full">
+            <label class="form-label" for="{{ form.project_title.id_for_label }}">Project title</label>
+            {{ form.project_title }}
+            {{ form.project_title.errors }}
+          </div>
+          <div class="pm-project-form__field pm-project-form__field--full">
+            <label class="form-label" for="{{ form.idea.id_for_label }}">Your idea</label>
+            {{ form.idea }}
+            {{ form.idea.errors }}
+          </div>
+          <div class="pm-project-form__field">
+            <label class="form-label" for="{{ form.tech_stack.id_for_label }}">Preferred tech</label>
+            {{ form.tech_stack }}
+          </div>
+          <div class="pm-project-form__field">
+            <label class="form-label" for="{{ form.timeline.id_for_label }}">Timeline</label>
+            {{ form.timeline }}
+          </div>
+        </div>
+        <button type="submit" class="btn btn-pm btn-pm-glow">
+          Submit my idea <i class="fas fa-paper-plane ms-1" aria-hidden="true"></i>
+        </button>
+        <p class="pm-project-form__note">By submitting, you agree we may contact you about this project only.</p>
+      </form>
+    </div>
+  </div>
+</section>
+
+{% if project_plans %}
+<section class="pm-section pm-project-plans" id="project-plans">
+  <div class="container">
+    <div class="pm-project-plans__head reveal">
+      <span class="section-eyebrow">Plans &amp; pricing</span>
+      <h2 class="pm-project-plans__title">Choose the level that fits your goal</h2>
+      <p class="pm-project-plans__lead">Select a plan here first — then fill your details in the form above.</p>
+      <p class="pm-project-plans__hint" data-plan-hint hidden>
+        <i class="fas fa-hand-pointer" aria-hidden="true"></i>
+        Select a plan, then fill the form above.
+      </p>
+    </div>
+
+    <div class="pm-project-plans__grid" data-plan-grid>
+      {% for plan in project_plans %}
+      <article class="pm-project-plan reveal{% if plan.is_highlighted %} pm-project-plan--hot{% endif %}"
+               data-plan-card
+               data-plan-id="{{ plan.pk }}"
+               data-plan-name="{{ plan.name }}">
+        {% if plan.badge %}<span class="pm-project-plan__badge">{{ plan.badge }}</span>{% endif %}
+        <h3 class="pm-project-plan__name">{{ plan.name }}</h3>
+        {% if plan.tagline %}<p class="pm-project-plan__tagline">{{ plan.tagline }}</p>{% endif %}
+        <p class="pm-project-plan__price">{{ plan.display_price }}</p>
+        {% if plan.description %}<p class="pm-project-plan__desc">{{ plan.description }}</p>{% endif %}
+        {% if plan.feature_list %}
+        <ul class="pm-project-plan__features">
+          {% for feature in plan.feature_list %}
+          <li><i class="fas fa-check" aria-hidden="true"></i> {{ feature }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        <button type="button"
+                class="btn {% if plan.is_highlighted %}btn-pm btn-pm-glow{% else %}btn-pm-outline{% endif %} pm-project-plan__cta"
+                data-plan-select
+                data-plan-id="{{ plan.pk }}"
+                data-plan-name="{{ plan.name }}">
+          Select this plan
+        </button>
+      </article>
+      {% endfor %}
+    </div>
+
+    {% if project_perks %}
+    <div class="pm-project-perks reveal">
+      <h3 class="pm-project-perks__title">With every project you get</h3>
+      <div class="pm-project-perks__stage" aria-label="Included with every project">
+        {% for perk in project_perks %}
+        <article class="pm-project-perk-card pm-project-perk-card--{{ forloop.counter }}">
+          <span class="pm-project-perk-card__icon" aria-hidden="true">
+            <i class="{{ perk.icon|default:'fas fa-check' }}"></i>
+          </span>
+          <p class="pm-project-perk-card__text">{{ perk.title }}</p>
+        </article>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}

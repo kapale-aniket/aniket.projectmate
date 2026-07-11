@@ -1,0 +1,57 @@
+{% extends "adminpanel/base.html" %}
+{% load static %}
+{% block page_title %}LinkedIn logs{% endblock %}
+{% block extra_css %}<link href="{% static 'css/linkedin-admin.css' %}" rel="stylesheet">{% endblock %}
+{% block content %}
+{% include "adminpanel/linkedin/_nav.html" %}
+{% csrf_token %}
+<div class="row g-3">
+  <div class="col-lg-9">
+    <div class="ap-card">
+      <form id="liLogsFilter" class="row g-2 mb-3">
+        <div class="col-md-5"><input class="form-control form-control-sm" name="q" id="liLogsQ" value="{{ search }}" placeholder="Search logs"></div>
+        <div class="col-md-3">
+          <select class="form-select form-select-sm" id="liLogsSort" name="sort">
+            <option value="date" {% if sort_by == 'date' %}selected{% endif %}>Sort: Date</option>
+            <option value="level" {% if sort_by == 'level' %}selected{% endif %}>Sort: Level</option>
+            <option value="message" {% if sort_by == 'message' %}selected{% endif %}>Sort: Message</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select class="form-select form-select-sm" id="liLogsOrder" name="order">
+            <option value="desc" {% if sort_dir == 'desc' %}selected{% endif %}>Newest</option>
+            <option value="asc" {% if sort_dir == 'asc' %}selected{% endif %}>Oldest</option>
+          </select>
+        </div>
+        <div class="col-md-2"><button class="btn btn-outline-secondary btn-sm w-100" type="submit">Apply</button></div>
+      </form>
+      <pre class="li-log" id="liLiveLog" style="max-height:560px">{% for log in logs %}[{{ log.created_at|date:"H:i:s" }}] [{{ log.level }}] {{ log.message }}
+{% empty %}No logs yet.{% endfor %}</pre>
+    </div>
+  </div>
+  <div class="col-lg-3">
+    <div class="ap-card mb-3">
+      <h2 class="h6 mb-2">Active task</h2>
+      {% if active_task %}
+      <p class="mb-1"><strong>{{ active_task.get_task_type_display }}</strong></p>
+      <p class="small text-muted">{{ active_task.get_status_display }}</p>
+      <button type="button" class="btn btn-outline-danger btn-sm" id="liStopTask">Stop task</button>
+      {% else %}
+      <p class="text-muted small mb-0">Idle</p>
+      {% endif %}
+    </div>
+    {% if file_logs %}
+    <div class="ap-card">
+      <h2 class="h6 mb-2">Automation files</h2>
+      {% for fl in file_logs %}
+      <div class="small border-bottom py-1 text-break">{{ fl.message|truncatechars:80 }}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/linkedin-admin.js' %}"></script>
+<script>PMLinkedIn.init({ apiBase: "{% url 'linkedin:home' %}", features: { logs: true } });</script>
+{% endblock %}

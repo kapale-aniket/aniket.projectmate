@@ -1,0 +1,285 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Mark attendance — {{ free_class.title }}{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div>
+    <a href="{% url 'adminpanel:attendance' %}" class="small text-muted text-decoration-none">
+      <i class="fas fa-arrow-left me-1"></i> Attendance
+    </a>
+    <h2 class="h5 mb-0 mt-1">{{ free_class.title }}</h2>
+    <p class="small text-muted mb-0">
+      {{ free_class.date|date:"D, M j, Y" }} · {{ total_students }} registered
+      <span id="attDraftHint" class="ms-2 text-warning d-none">
+        <i class="fas fa-pen-to-square me-1"></i>Unsaved changes — click Save when done
+      </span>
+    </p>
+  </div>
+  <a class="btn btn-outline-secondary btn-icon" href="{% url 'adminpanel:attendance_export' free_class.pk %}"
+     data-bs-toggle="tooltip" title="Export Excel"><i class="fas fa-download"></i></a>
+</div>
+
+<form method="post" id="attendanceMarkForm" data-class-id="{{ free_class.pk }}">
+  {% csrf_token %}
+  {% if page_obj %}<input type="hidden" name="page" value="{{ page_obj.number }}">{% endif %}
+  <div id="attDraftFields"></div>
+
+  <div id="attBulkBar" class="ap-bulk-bar ap-card mb-3 d-none">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+      <div class="small fw-semibold">
+        <span id="attSelectedCount">0</span> selected
+        <button type="button" class="btn btn-link btn-sm py-0" id="attClearSelection">Clear</button>
+      </div>
+      <div class="ap-actions">
+        <button type="button" class="btn btn-success btn-sm" data-bulk-status="present"
+                data-bs-toggle="tooltip" title="Mark selected present">
+          <i class="fas fa-circle-check me-1"></i> Present
+        </button>
+        <button type="button" class="btn btn-danger btn-sm" data-bulk-status="absent"
+                data-bs-toggle="tooltip" title="Mark selected absent">
+          <i class="fas fa-circle-xmark me-1"></i> Absent
+        </button>
+        <button type="button" class="btn btn-warning btn-sm text-dark" data-bulk-status="late"
+                data-bs-toggle="tooltip" title="Mark selected active in session (+bonus points)">
+          <i class="fas fa-bolt me-1"></i> Active
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="ap-card table-responsive">
+    <table class="table ap-table align-middle mb-0" id="attendanceTable">
+      <thead>
+        <tr>
+          <th style="width:42px">
+            <input type="checkbox" class="form-check-input" id="attSelectAll"
+                   title="Select all on this page" aria-label="Select all on this page">
+          </th>
+          <th>Student</th>
+          <th class="text-end" style="min-width:220px">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% with status=row.attendance.status|default:"present" %}
+        <tr class="att-row att-status-{{ status }}" data-student-id="{{ row.reg.student_id }}">
+          <td>
+            <input type="checkbox" class="form-check-input att-select"
+                   value="{{ row.reg.student_id }}"
+                   aria-label="Select {{ row.reg.student.email }}">
+          </td>
+          <td>
+            <div class="fw-semibold">
+              {{ row.reg.student.get_full_name|default:row.reg.student.email }}
+            </div>
+            {% if row.reg.student.get_full_name %}
+            <div class="small text-muted">{{ row.reg.student.email }}</div>
+            {% endif %}
+          </td>
+          <td class="text-end">
+            <input type="hidden" name="status_{{ row.reg.student_id }}" value="{{ status }}" class="att-status-input">
+            <div class="att-status-group" role="group" aria-label="Attendance for {{ row.reg.student.email }}">
+              <button type="button" class="btn att-status-btn{% if status == 'present' %} is-active{% endif %}"
+                      data-status="present" data-bs-toggle="tooltip" title="Present">
+                <i class="fas fa-circle-check"></i>
+              </button>
+              <button type="button" class="btn att-status-btn{% if status == 'absent' %} is-active{% endif %}"
+                      data-status="absent" data-bs-toggle="tooltip" title="Absent">
+                <i class="fas fa-circle-xmark"></i>
+              </button>
+              <button type="button" class="btn att-status-btn{% if status == 'late' %} is-active{% endif %}"
+                      data-status="late" data-bs-toggle="tooltip" title="Active in session (+bonus points)">
+                <i class="fas fa-bolt"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr><td colspan="3" class="text-muted py-4 text-center">No confirmed registrations.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if rows %}
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-3">
+    <p class="small text-muted mb-0 att-legend">
+      <span><i class="fas fa-circle-check text-success"></i> Present</span>
+      <span><i class="fas fa-circle-xmark text-danger"></i> Absent</span>
+      <span><i class="fas fa-bolt text-warning"></i> Active <span class="text-muted">(more points)</span></span>
+    </p>
+    <button class="btn btn-ap" type="submit">
+      <i class="fas fa-save me-1"></i> Save attendance
+    </button>
+  </div>
+  {% endif %}
+</form>
+{% if is_paginated %}<div class="mt-3">{% include "components/pagination.html" %}</div>{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var form = document.getElementById('attendanceMarkForm');
+  if (!form) return;
+
+  var classId = form.getAttribute('data-class-id');
+  var storageKey = 'attendance-draft-' + classId;
+  var selectAll = document.getElementById('attSelectAll');
+  var bulkBar = document.getElementById('attBulkBar');
+  var countEl = document.getElementById('attSelectedCount');
+  var clearBtn = document.getElementById('attClearSelection');
+  var draftHint = document.getElementById('attDraftHint');
+  var draftFields = document.getElementById('attDraftFields');
+
+  function readDraft() {
+    try {
+      return JSON.parse(sessionStorage.getItem(storageKey) || '{}') || {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function writeDraft(draft) {
+    sessionStorage.setItem(storageKey, JSON.stringify(draft));
+    updateDraftHint();
+  }
+
+  function clearDraft() {
+    sessionStorage.removeItem(storageKey);
+    updateDraftHint();
+  }
+
+  function updateDraftHint() {
+    if (!draftHint) return;
+    var draft = readDraft();
+    draftHint.classList.toggle('d-none', Object.keys(draft).length === 0);
+  }
+
+  function saveStatus(studentId, status) {
+    var draft = readDraft();
+    draft[String(studentId)] = status;
+    writeDraft(draft);
+  }
+
+  function rowChecks() {
+    return Array.prototype.slice.call(form.querySelectorAll('.att-select'));
+  }
+
+  function selectedRows() {
+    return rowChecks().filter(function (c) { return c.checked; });
+  }
+
+  function updateBulkBar() {
+    var n = selectedRows().length;
+    countEl.textContent = String(n);
+    bulkBar.classList.toggle('d-none', n === 0);
+    if (selectAll) {
+      var all = rowChecks();
+      selectAll.checked = all.length > 0 && all.every(function (c) { return c.checked; });
+      selectAll.indeterminate = n > 0 && n < all.length;
+    }
+  }
+
+  function setRowStatus(row, status, opts) {
+    opts = opts || {};
+    var input = row.querySelector('.att-status-input');
+    if (input) input.value = status;
+    row.classList.remove('att-status-present', 'att-status-absent', 'att-status-late', 'att-status-excused');
+    row.classList.add('att-status-' + status);
+    row.querySelectorAll('.att-status-btn').forEach(function (btn) {
+      var active = btn.getAttribute('data-status') === status;
+      btn.classList.toggle('is-active', active);
+      if (active && !opts.silent) {
+        btn.classList.remove('att-pop');
+        void btn.offsetWidth;
+        btn.classList.add('att-pop');
+      }
+    });
+    if (!opts.skipStore) {
+      saveStatus(row.getAttribute('data-student-id'), status);
+    }
+  }
+
+  function restoreDraftOnPage() {
+    var draft = readDraft();
+    form.querySelectorAll('.att-row').forEach(function (row) {
+      var id = row.getAttribute('data-student-id');
+      if (draft[id]) {
+        setRowStatus(row, draft[id], { silent: true, skipStore: true });
+      }
+    });
+  }
+
+  form.addEventListener('click', function (e) {
+    var btn = e.target.closest('.att-status-btn');
+    if (!btn) return;
+    e.preventDefault();
+    var row = btn.closest('.att-row');
+    if (!row) return;
+    setRowStatus(row, btn.getAttribute('data-status'));
+  });
+
+  form.addEventListener('change', function (e) {
+    if (e.target.classList.contains('att-select') || e.target === selectAll) {
+      updateBulkBar();
+    }
+  });
+
+  if (selectAll) {
+    selectAll.addEventListener('change', function () {
+      rowChecks().forEach(function (c) { c.checked = selectAll.checked; });
+      updateBulkBar();
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function () {
+      rowChecks().forEach(function (c) { c.checked = false; });
+      updateBulkBar();
+    });
+  }
+
+  form.querySelectorAll('[data-bulk-status]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var status = btn.getAttribute('data-bulk-status');
+      selectedRows().forEach(function (c) {
+        var row = c.closest('.att-row');
+        if (row) setRowStatus(row, status);
+      });
+    });
+  });
+
+  form.addEventListener('submit', function () {
+    var draft = readDraft();
+    form.querySelectorAll('.att-row').forEach(function (row) {
+      var id = row.getAttribute('data-student-id');
+      var input = row.querySelector('.att-status-input');
+      if (id && input) draft[id] = input.value;
+    });
+
+    if (draftFields) {
+      draftFields.innerHTML = '';
+      var onPage = {};
+      form.querySelectorAll('.att-status-input').forEach(function (input) {
+        onPage[input.name] = true;
+      });
+      Object.keys(draft).forEach(function (id) {
+        var name = 'status_' + id;
+        if (onPage[name]) return;
+        var hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = name;
+        hidden.value = draft[id];
+        draftFields.appendChild(hidden);
+      });
+    }
+    clearDraft();
+  });
+
+  restoreDraftOnPage();
+  updateDraftHint();
+  updateBulkBar();
+})();
+</script>
+{% endblock %}

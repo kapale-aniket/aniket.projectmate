@@ -1,0 +1,18 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Resume reviews{% endblock %}
+{% block content %}
+{% for u in uploads %}
+<div class="ap-card mb-3">
+  <div class="d-flex justify-content-between"><strong>{{ u.student.email }}</strong><span class="badge text-bg-secondary">{{ u.get_status_display }}</span></div>
+  {% if u.file %}<a href="{{ u.file.url }}" target="_blank">Download resume</a>{% endif %}
+  {% if u.status != 'completed' %}
+  <form method="post" action="{% url 'adminpanel:resume_review' u.pk %}" class="mt-2">{% csrf_token %}
+    <textarea name="feedback" class="form-control mb-2" rows="3" placeholder="Feedback" required></textarea>
+    <input type="number" name="score" class="form-control mb-2" placeholder="Score 1-10" min="1" max="10" style="max-width:120px">
+    <button class="btn btn-ap btn-sm" type="submit">Submit review & email</button>
+  </form>
+  {% endif %}
+</div>
+{% empty %}<p class="text-muted">No resume uploads.</p>{% endfor %}
+{% if is_paginated %}<div class="mt-3">{% include "components/pagination.html" %}</div>{% endif %}
+{% endblock %}

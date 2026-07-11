@@ -1,0 +1,40 @@
+{# Shared free/paid class registration form.
+   Expects: form, action_url, submit_label, site_settings
+#}
+<form method="post" action="{{ action_url }}" class="class-register-form mt-3">
+  {% csrf_token %}
+  {% if form.non_field_errors %}
+  <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <div class="community-follow-box mb-3">
+    <p class="fw-semibold mb-2">Join our community for next updates</p>
+    <p class="small text-muted mb-3">Follow us, then tick the box below to complete registration.</p>
+    <div class="d-flex flex-wrap gap-2 mb-3">
+      {% if site_settings.instagram_url %}
+      <a href="{{ site_settings.instagram_url }}" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">
+        <i class="fab fa-instagram me-1" style="color:#e1306c"></i> Instagram
+      </a>
+      {% endif %}
+      {% if site_settings.whatsapp_url %}
+      <a href="{{ site_settings.whatsapp_url }}" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">
+        <i class="fab fa-whatsapp me-1" style="color:#25d366"></i> WhatsApp community
+      </a>
+      {% endif %}
+      {% if not site_settings.instagram_url and not site_settings.whatsapp_url %}
+      <span class="small text-muted">Community links will appear here once set by admin.</span>
+      {% endif %}
+    </div>
+    <div class="form-check">
+      {{ form.following_community }}
+      <label class="form-check-label" for="{{ form.following_community.id_for_label }}">
+        {{ form.following_community.label }}
+      </label>
+      {% for e in form.following_community.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-pm btn-lg">
+    <i class="fas fa-check me-1"></i> {{ submit_label|default:"Register" }}
+  </button>
+</form>

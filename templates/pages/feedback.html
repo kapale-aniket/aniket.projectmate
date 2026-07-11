@@ -1,0 +1,71 @@
+{% extends "base/base.html" %}
+{% block title %}Feedback — Aniket.ProjectMate{% endblock %}
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+{% endblock %}
+{% block content %}
+<section class="pm-section" id="feedback-top">
+  <div class="container" style="max-width:640px">
+    <div class="glass-card p-4 p-md-5 no-hover">
+      <h1 class="h3 display-font mb-2">Share feedback</h1>
+      <p class="text-muted">Approved reviews appear on the landing page. Earn points when approved.</p>
+      {% if user.is_authenticated %}
+      <form method="post" novalidate class="pm-feedback-form">{% csrf_token %}
+        {% include "components/feedback_form_fields.html" %}
+        <button type="submit" class="btn btn-pm mt-2" {% if not form.free_class.field.queryset.exists %}disabled{% endif %}>Submit feedback</button>
+      </form>
+      {% else %}
+      <a href="{% url 'accounts:trust' %}?next={% url 'feedback:create' %}" class="btn btn-pm">Sign in to submit</a>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+(function () {
+  function initWorkshopSelect() {
+    var $el = $(".pm-select2");
+    if (!$el.length || typeof $.fn.select2 !== "function") return;
+    if ($el.hasClass("select2-hidden-accessible")) {
+      $el.select2("destroy");
+    }
+    $el.select2({
+      theme: "bootstrap-5",
+      width: "100%",
+      placeholder: $el.data("placeholder") || "Select a workshop…",
+      allowClear: false,
+    });
+  }
+  initWorkshopSelect();
+  document.body.addEventListener("htmx:afterSwap", initWorkshopSelect);
+
+  function initReviewCounter() {
+    document.querySelectorAll("[data-pm-char-count='1']").forEach(function (el) {
+      if (el.dataset.counterBound === "1") return;
+      el.dataset.counterBound = "1";
+      var min = parseInt(el.getAttribute("data-pm-char-min") || "50", 10);
+      var max = parseInt(el.getAttribute("data-pm-char-max") || "100", 10);
+      var counter =
+        document.querySelector('[data-pm-char-counter][data-for="' + el.id + '"]') ||
+        el.parentElement.querySelector("[data-pm-char-counter]");
+      function paint() {
+        var n = (el.value || "").length;
+        if (counter) {
+          counter.textContent = n + " / " + max;
+          counter.classList.toggle("text-danger", n > 0 && (n < min || n > max));
+          counter.classList.toggle("text-success", n >= min && n <= max);
+        }
+      }
+      el.addEventListener("input", paint);
+      paint();
+    });
+  }
+  initReviewCounter();
+  document.body.addEventListener("htmx:afterSwap", initReviewCounter);
+})();
+</script>
+{% endblock %}

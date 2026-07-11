@@ -1,0 +1,195 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Community{% endblock %}
+{% block content %}
+<ul class="nav nav-pills gap-2 mb-3">
+  <li class="nav-item"><a class="nav-link {% if tab == 'feedback' %}active{% endif %}" href="?tab=feedback">Feedback</a></li>
+  <li class="nav-item"><a class="nav-link {% if tab == 'resumes' %}active{% endif %}" href="?tab=resumes">Resumes</a></li>
+  <li class="nav-item"><a class="nav-link {% if tab == 'referrals' %}active{% endif %}" href="?tab=referrals">Referrals</a></li>
+</ul>
+
+{% if tab == 'feedback' %}
+<form method="get" action="{% url 'adminpanel:community' %}" class="d-flex flex-wrap gap-2 align-items-center mb-3" data-auto-filter>
+  <input type="hidden" name="tab" value="feedback">
+  <select class="form-select form-select-sm" style="width:180px" name="status" aria-label="Feedback status">
+    <option value="all" {% if not status and 'status' in request.GET %}selected{% endif %}>All feedback</option>
+    <option value="pending" {% if status == 'pending' or not status and 'status' not in request.GET %}selected{% endif %}>Pending</option>
+    <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+    <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+  </select>
+  <a class="btn btn-outline-secondary btn-icon" href="{% url 'adminpanel:community' %}?tab=feedback" data-reset-filter data-bs-toggle="tooltip" title="Reset filters"><i class="fas fa-rotate-left"></i></a>
+</form>
+{% for f in items %}
+<div class="ap-card mb-3">
+  <div class="d-flex justify-content-between flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2">
+      <div class="testimonial-avatar" style="width:36px;height:36px" aria-hidden="true">
+        {% if f.student.profile.profile_picture %}
+        <img src="{{ f.student.profile.profile_picture.url }}" alt="">
+        {% else %}
+        <span class="testimonial-avatar__fallback" style="font-size:.85rem">
+          {{ f.student.first_name|default:f.student.email|slice:":1"|upper }}{{ f.student.last_name|default:""|slice:":1"|upper }}
+        </span>
+        {% endif %}
+      </div>
+      <strong>{{ f.student.get_full_name|default:f.student.email }}</strong>
+    </div>
+    <span class="small">{{ f.rating }}★ · {{ f.get_status_display }}
+      {% if f.show_on_landing %}<span class="badge text-bg-success">On UI</span>{% endif %}
+      {% if f.is_featured %}<span class="badge text-bg-warning">Featured</span>{% endif %}
+      {% if f.admin_liked %}<span class="badge text-bg-danger"><i class="fas fa-heart"></i> Liked</span>{% endif %}
+    </span>
+  </div>
+  {% if f.free_class %}
+  <div class="small text-muted mt-1">
+    Workshop: <strong>{{ f.free_class.title }}</strong>
+    · Attendance:
+    {% if f.attendance_status == 'present' %}
+    <span class="badge text-bg-success">{{ f.attendance_label }}</span>
+    {% elif f.attendance_status == 'late' %}
+    <span class="badge text-bg-warning text-dark">{{ f.attendance_label }}</span>
+    {% elif f.attendance_status == 'absent' %}
+    <span class="badge text-bg-danger">{{ f.attendance_label }}</span>
+    {% else %}
+    <span class="badge text-bg-secondary">{{ f.attendance_label }}</span>
+    {% endif %}
+  </div>
+  {% endif %}
+  <p class="mb-2 mt-2">{{ f.review }}</p>
+  {% if f.admin_reply %}<div class="border-start border-3 ps-2 mb-2 small"><strong>Reply:</strong> {{ f.admin_reply }}</div>{% endif %}
+  <div class="ap-actions">
+    {% if f.status == 'pending' %}
+    {% if f.can_approve %}
+    <form method="post" action="{% url 'adminpanel:feedback_approve' f.pk %}">{% csrf_token %}
+      <button class="btn btn-outline-success btn-icon" type="submit" data-bs-toggle="tooltip" title="Approve"><i class="fas fa-check"></i></button>
+    </form>
+    {% else %}
+    <button class="btn btn-outline-secondary btn-icon" type="button" disabled
+            data-bs-toggle="tooltip" title="{{ f.approve_block_reason|default:'Cannot approve — present/active attendance required' }}">
+      <i class="fas fa-ban"></i>
+    </button>
+    {% endif %}
+    <form method="post" action="{% url 'adminpanel:feedback_reject' f.pk %}">{% csrf_token %}
+      <button class="btn btn-outline-danger btn-icon" type="submit" data-bs-toggle="tooltip" title="Reject"><i class="fas fa-xmark"></i></button>
+    </form>
+    {% endif %}
+    <form method="post" action="{% url 'adminpanel:feedback_show_on_ui' f.pk %}">{% csrf_token %}
+      <button class="btn {% if f.show_on_landing %}btn-success{% else %}btn-outline-success{% endif %} btn-icon" type="submit"
+              data-bs-toggle="tooltip"
+              title="{% if f.show_on_landing %}Hide from public UI{% else %}Show on UI (public site){% endif %}">
+        <i class="fas fa-eye"></i>
+      </button>
+    </form>
+    <form method="post" action="{% url 'adminpanel:feedback_like' f.pk %}">{% csrf_token %}
+      <button class="btn {% if f.admin_liked %}btn-danger{% else %}btn-outline-danger{% endif %} btn-icon" type="submit"
+              data-bs-toggle="tooltip"
+              title="{% if f.admin_liked %}Unlike{% else %}Like — notify this student only{% endif %}">
+        <i class="fas fa-heart"></i>
+      </button>
+    </form>
+    <form method="post" action="{% url 'adminpanel:feedback_feature' f.pk %}">{% csrf_token %}
+      <button class="btn btn-outline-warning btn-icon" type="submit" data-bs-toggle="tooltip" title="{% if f.is_featured %}Unfeature{% else %}Feature{% endif %}">
+        <i class="fas fa-star"></i>
+      </button>
+    </form>
+    <button type="button" class="btn btn-outline-primary btn-icon"
+            title="Reply — send to this student only"
+            data-bs-toggle="modal"
+            data-bs-target="#replyModal{{ f.pk }}"><i class="fas fa-reply"></i></button>
+    <button type="button" class="btn btn-outline-danger btn-icon"
+            title="Delete"
+            data-bs-toggle="modal" data-bs-target="#apConfirmModal"
+            data-action="{% url 'adminpanel:feedback_delete' f.pk %}"
+            data-message="Delete this feedback?"><i class="fas fa-trash"></i></button>
+  </div>
+  <div class="modal fade" id="replyModal{{ f.pk }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <form method="post" action="{% url 'adminpanel:feedback_reply' f.pk %}">
+          {% csrf_token %}
+          <div class="modal-header"><h2 class="modal-title h5">Reply to {{ f.student.email }}</h2>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+          <div class="modal-body">
+            <textarea name="admin_reply" class="form-control" rows="4" required placeholder="Write a reply...">{{ f.admin_reply }}</textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+            <button type="submit" class="btn btn-ap" data-bs-toggle="tooltip" title="Send to this student only"><i class="fas fa-paper-plane me-1"></i> Send to student</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% empty %}<p class="text-muted">No feedback.</p>{% endfor %}
+{% include "components/pagination.html" %}
+
+{% elif tab == 'resumes' %}
+{% for u in uploads %}
+<div class="ap-card mb-3">
+  <div class="d-flex justify-content-between align-items-center">
+    <div>
+      <strong>{{ u.student.email }}</strong>
+      <span class="badge text-bg-secondary">{{ u.get_status_display }}</span>
+      {% if u.file %}
+      <a class="btn btn-outline-secondary btn-icon ms-1" href="{{ u.file.url }}" target="_blank"
+         data-bs-toggle="tooltip" title="Download resume"><i class="fas fa-download"></i></a>
+      {% endif %}
+    </div>
+    {% if u.status != 'completed' %}
+    <button type="button" class="btn btn-ap btn-icon" title="Review resume"
+            data-bs-toggle="modal" data-bs-target="#resumeModal{{ u.pk }}"><i class="fas fa-clipboard-check"></i></button>
+    <div class="modal fade" id="resumeModal{{ u.pk }}" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form method="post" action="{% url 'adminpanel:resume_review' u.pk %}">
+            {% csrf_token %}
+            <div class="modal-header"><h2 class="modal-title h5">Review resume</h2>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+              <textarea name="feedback" class="form-control mb-2" rows="4" placeholder="Feedback" required></textarea>
+              <input type="number" name="score" class="form-control" placeholder="Score 1-10" min="1" max="10">
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-ap"><i class="fas fa-paper-plane me-1"></i> Submit</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% empty %}<p class="text-muted">No resume uploads.</p>{% endfor %}
+{% include "components/pagination.html" %}
+
+{% else %}
+<form method="get" action="{% url 'adminpanel:community' %}" class="d-flex flex-wrap gap-2 align-items-center mb-3" data-auto-filter>
+  <input type="hidden" name="tab" value="referrals">
+  <select class="form-select form-select-sm" style="width:180px" name="status" aria-label="Referral status">
+    <option value="">All referrals</option>
+    <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+    <option value="approved" {% if status == 'approved' %}selected{% endif %}>Approved</option>
+    <option value="rejected" {% if status == 'rejected' %}selected{% endif %}>Rejected</option>
+  </select>
+  <a class="btn btn-outline-secondary btn-icon" href="{% url 'adminpanel:community' %}?tab=referrals" data-reset-filter data-bs-toggle="tooltip" title="Reset filters"><i class="fas fa-rotate-left"></i></a>
+</form>
+{% for r in referrals %}
+<div class="ap-card mb-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <div><strong>{{ r.referrer.email }}</strong> → {{ r.referred_user.email }}
+    <span class="badge text-bg-secondary">{{ r.get_status_display }}</span></div>
+  {% if r.status == 'pending' %}
+  <div class="ap-actions">
+    <form method="post" action="{% url 'adminpanel:referral_approve' r.pk %}">{% csrf_token %}
+      <button class="btn btn-outline-success btn-icon" type="submit" data-bs-toggle="tooltip" title="Approve"><i class="fas fa-check"></i></button>
+    </form>
+    <form method="post" action="{% url 'adminpanel:referral_reject' r.pk %}">{% csrf_token %}
+      <button class="btn btn-outline-danger btn-icon" type="submit" data-bs-toggle="tooltip" title="Reject"><i class="fas fa-xmark"></i></button>
+    </form>
+  </div>
+  {% endif %}
+</div>
+{% empty %}<p class="text-muted">No referrals.</p>{% endfor %}
+{% include "components/pagination.html" %}
+{% endif %}
+{% endblock %}

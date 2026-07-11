@@ -1,0 +1,50 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Bulk email{% endblock %}
+{% block content %}
+<div class="ap-card" style="max-width:760px">
+  <p class="text-muted small mb-3">Write plain text → generate HTML preview → confirm → send.</p>
+  <form method="post" id="bulkEmailForm">{% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.subject.id_for_label }}">{{ form.subject.label }}</label>
+      {{ form.subject }}
+      {% for e in form.subject.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.body_text.id_for_label }}">{{ form.body_text.label }}</label>
+      {{ form.body_text }}
+      {% if form.body_text.help_text %}<div class="form-text">{{ form.body_text.help_text }}</div>{% endif %}
+      {% for e in form.body_text.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.audience.id_for_label }}">{{ form.audience.label }}</label>
+      {{ form.audience }}
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="{{ form.student_ids.id_for_label }}">{{ form.student_ids.label }}</label>
+      {{ form.student_ids }}
+      {% if form.student_ids.help_text %}<div class="form-text">{{ form.student_ids.help_text }}</div>{% endif %}
+    </div>
+
+    <div class="mb-3">
+      <button type="button"
+              class="btn btn-outline-secondary"
+              hx-post="{% url 'adminpanel:email_preview' %}"
+              hx-target="#bulkEmailPreview"
+              hx-swap="innerHTML"
+              hx-include="#bulkEmailForm [name=subject], #bulkEmailForm [name=body_text], #bulkEmailForm [name=csrfmiddlewaretoken]">
+        <i class="fas fa-eye me-1"></i> Generate HTML preview
+      </button>
+    </div>
+    <div id="bulkEmailPreview" class="mb-3"></div>
+
+    <div class="form-check mb-3">
+      {{ form.preview_confirmed }}
+      <label class="form-check-label" for="{{ form.preview_confirmed.id_for_label }}">{{ form.preview_confirmed.label }}</label>
+      {% for e in form.preview_confirmed.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+    </div>
+    <button class="btn btn-ap" type="submit" id="bulkEmailSendBtn" disabled>
+      <i class="fas fa-paper-plane me-1"></i> Send bulk email
+    </button>
+  </form>
+</div>
+{% endblock %}

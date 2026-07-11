@@ -1,0 +1,25 @@
+{% extends "base/base.html" %}
+{% block title %}My Classes — Dashboard{% endblock %}
+{% block content %}
+<section class="pm-section"><div class="container"><div class="row g-4">
+  <div class="col-lg-3">{% include "dashboard/sidebar.html" %}</div>
+  <div class="col-lg-9" id="dash-content">
+    <h1 class="h3 display-font mb-4">Registered classes</h1>
+    {% for reg in registrations %}
+    <div class="glass-card p-3 mb-2 no-hover d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <div>
+        <strong>{{ reg.free_class.title }}</strong>
+        <div class="small text-muted">{{ reg.free_class.date|date:"M d, Y" }} · {{ reg.free_class.start_time|time:"g:i A" }}</div>
+      </div>
+      <div class="d-flex gap-2 align-items-center">
+        <span class="pm-badge">{{ reg.get_status_display }}</span>
+        <a href="{{ reg.free_class.get_absolute_url }}" class="btn btn-pm-outline btn-sm">Open</a>
+      </div>
+    </div>
+    {% empty %}
+    <p class="text-muted">No registrations yet. <a href="{% url 'classes:list' %}">Browse free classes</a></p>
+    {% endfor %}
+    {% include "components/pagination.html" %}
+  </div>
+</div></div></section>
+{% endblock %}

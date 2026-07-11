@@ -1,0 +1,68 @@
+{% extends "base/base.html" %}
+{% block title %}Contact — Aniket.ProjectMate{% endblock %}
+{% block content %}
+<section class="pm-section pm-contact">
+  <div class="container">
+    <div class="pm-contact__grid">
+      <div class="pm-contact__aside">
+        <span class="pm-contact__eyebrow">Contact</span>
+        <h1 class="pm-contact__title">Get in touch</h1>
+        <p class="pm-contact__lead">Questions about classes, courses, or joining the community? Send a message — we read every one.</p>
+        <ul class="pm-contact__meta">
+          {% if site_settings.contact_email %}
+          <li>
+            <span class="pm-contact__meta-icon" aria-hidden="true"><i class="fas fa-envelope"></i></span>
+            <div>
+              <span class="pm-contact__meta-label">Email</span>
+              <a href="mailto:{{ site_settings.contact_email }}">{{ site_settings.contact_email }}</a>
+            </div>
+          </li>
+          {% endif %}
+          {% if site_settings.contact_phone %}
+          <li>
+            <span class="pm-contact__meta-icon" aria-hidden="true"><i class="fas fa-phone"></i></span>
+            <div>
+              <span class="pm-contact__meta-label">Phone</span>
+              <a href="tel:{{ site_settings.contact_phone }}">{{ site_settings.contact_phone }}</a>
+            </div>
+          </li>
+          {% endif %}
+          {% if site_settings.whatsapp_url %}
+          <li>
+            <span class="pm-contact__meta-icon" aria-hidden="true"><i class="fab fa-whatsapp"></i></span>
+            <div>
+              <span class="pm-contact__meta-label">WhatsApp</span>
+              <a href="{{ site_settings.whatsapp_url }}" target="_blank" rel="noopener">Message the community</a>
+            </div>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+      <form class="pm-contact__form" method="post">
+        {% csrf_token %}
+        <div class="pm-contact__fields">
+          <div class="pm-contact__field">
+            <label class="form-label" for="{{ form.name.id_for_label }}">Name</label>
+            {{ form.name }}
+          </div>
+          <div class="pm-contact__field">
+            <label class="form-label" for="{{ form.email.id_for_label }}">Email</label>
+            {{ form.email }}
+          </div>
+          <div class="pm-contact__field pm-contact__field--full">
+            <label class="form-label" for="{{ form.subject.id_for_label }}">Subject</label>
+            {{ form.subject }}
+          </div>
+          <div class="pm-contact__field pm-contact__field--full">
+            <label class="form-label" for="{{ form.message.id_for_label }}">Message</label>
+            {{ form.message }}
+          </div>
+        </div>
+        <button type="submit" class="btn btn-pm btn-pm-glow">
+          Send message <i class="fas fa-paper-plane ms-1" aria-hidden="true"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

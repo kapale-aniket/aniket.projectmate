@@ -1,0 +1,312 @@
+{
+  "job": {
+    "keywords": [
+      "Python Developer Fresher",
+      "Django Developer Fresher"
+    ],
+    "locations": [
+      "Pune",
+      "Bangalore"
+    ],
+    "max_pages": 40,
+    "max_jobs": 0,
+    "max_job_age_hours": 2,
+    "search_min_delay": 1.0,
+    "search_max_delay": 2.0,
+    "headless": false,
+    "auto_resume": true,
+    "excel_format": {
+      "sheet_title": "aniket.projectmate Jobs",
+      "sheet_name": "Todays Jobs",
+      "watermark_text": "aniket.projectmate",
+      "style": {
+        "header_bg": "1F4E79",
+        "header_font_color": "FFFFFF",
+        "header_font_size": 11,
+        "title_font_size": 16,
+        "title_color": "1F4E79",
+        "section_bg": "D6E4F0",
+        "section_font_color": "1F4E79",
+        "banner_bg": "1F4E79",
+        "banner_font_color": "FFFFFF",
+        "alternate_row_bg": "F2F7FB",
+        "border_color": "D9D9D9",
+        "link_color": "0563C1",
+        "yes_color": "2E7D32",
+        "row_height": 22,
+        "header_row_height": 28,
+        "title_row_height": 36,
+        "freeze_panes_row": 2
+      },
+      "layout": {
+        "group_by_experience": true,
+        "group_by_company_size": true,
+        "zero_year_section": "Freshers",
+        "one_year_section": "1 Year Experience"
+      },
+      "columns": [
+        {
+          "key": "sr_no",
+          "header": "Sr No",
+          "width": 7,
+          "visible": true
+        },
+        {
+          "key": "job_role",
+          "header": "Job Role",
+          "width": 30,
+          "visible": true
+        },
+        {
+          "key": "company_name",
+          "header": "Company Name",
+          "width": 28,
+          "visible": true
+        },
+        {
+          "key": "company_size",
+          "header": "Employee Size",
+          "width": 16,
+          "visible": true
+        },
+        {
+          "key": "freshers_eligible",
+          "header": "Freshers Eligible",
+          "width": 16,
+          "visible": false
+        },
+        {
+          "key": "experience_required",
+          "header": "Experience Required",
+          "width": 18,
+          "visible": true
+        },
+        {
+          "key": "skills_required",
+          "header": "Skills Required",
+          "width": 42,
+          "visible": true
+        },
+        {
+          "key": "location",
+          "header": "Location",
+          "width": 16,
+          "visible": true
+        },
+        {
+          "key": "package_lpa",
+          "header": "Package (LPA)",
+          "width": 14,
+          "visible": false
+        },
+        {
+          "key": "posted_text",
+          "header": "Posted",
+          "width": 14,
+          "visible": true
+        },
+        {
+          "key": "easy_apply",
+          "header": "Easy Apply",
+          "width": 12,
+          "visible": true
+        },
+        {
+          "key": "apply_link",
+          "header": "Apply Link",
+          "width": 55,
+          "visible": true
+        }
+      ]
+    }
+  },
+  "connection": {
+    "keywords": [
+      "Python Team Lead",
+      "Python Recruiter",
+      "HR Recruiter"
+    ],
+    "locations": [
+      "Pune",
+      "Bangalore"
+    ],
+    "max_connections_per_run": 100,
+    "max_pages": 200,
+    "min_delay": 1,
+    "max_delay": 2,
+    "scroll_rounds": 6,
+    "search_min_delay": 1,
+    "search_max_delay": 2,
+    "headless": false,
+    "excel_format": {
+      "sheet_title": "aniket.projectmate Connections",
+      "sheet_name": "Connections",
+      "watermark_text": "aniket.projectmate",
+      "style": {
+        "header_bg": "1F4E79",
+        "header_font_color": "FFFFFF",
+        "header_font_size": 11,
+        "title_font_size": 16,
+        "title_color": "1F4E79",
+        "section_bg": "D6E4F0",
+        "section_font_color": "1F4E79",
+        "banner_bg": "1F4E79",
+        "banner_font_color": "FFFFFF",
+        "alternate_row_bg": "F2F7FB",
+        "border_color": "D9D9D9",
+        "link_color": "0563C1",
+        "yes_color": "2E7D32",
+        "row_height": 22,
+        "header_row_height": 28,
+        "title_row_height": 36,
+        "freeze_panes_row": 2
+      },
+      "layout": {
+        "export_excel": true
+      },
+      "columns": [
+        {
+          "key": "timestamp",
+          "header": "Timestamp",
+          "width": 20,
+          "visible": true
+        },
+        {
+          "key": "name",
+          "header": "Name",
+          "width": 28,
+          "visible": true
+        },
+        {
+          "key": "headline",
+          "header": "Headline",
+          "width": 40,
+          "visible": true
+        },
+        {
+          "key": "profile_url",
+          "header": "Profile URL",
+          "width": 50,
+          "visible": true
+        },
+        {
+          "key": "keyword",
+          "header": "Keyword",
+          "width": 24,
+          "visible": true
+        },
+        {
+          "key": "location",
+          "header": "Location",
+          "width": 18,
+          "visible": true
+        },
+        {
+          "key": "connect_status",
+          "header": "Connect Status",
+          "width": 16,
+          "visible": true
+        }
+      ]
+    }
+  },
+  "posts": {
+    "max_scroll_rounds": 30,
+    "max_posts_per_run": 0,
+    "search_min_delay": 1,
+    "search_max_delay": 2,
+    "headless": false,
+    "excel_format": {
+      "sheet_title": "LinkedIn Hiring Posts (Freshers / Interns)",
+      "sheet_name": "Hiring Posts",
+      "watermark_text": "aniket.projectmate",
+      "style": {
+        "header_bg": "1F4E79",
+        "header_font_color": "FFFFFF",
+        "header_font_size": 11,
+        "title_font_size": 16,
+        "title_color": "1F4E79",
+        "section_bg": "D6E4F0",
+        "section_font_color": "1F4E79",
+        "banner_bg": "1F4E79",
+        "banner_font_color": "FFFFFF",
+        "alternate_row_bg": "F2F7FB",
+        "border_color": "D9D9D9",
+        "link_color": "0563C1",
+        "yes_color": "2E7D32",
+        "row_height": 22,
+        "header_row_height": 28,
+        "title_row_height": 36,
+        "freeze_panes_row": 2
+      },
+      "layout": {},
+      "columns": [
+        {
+          "key": "sr_no",
+          "header": "Sr No",
+          "width": 7,
+          "visible": true
+        },
+        {
+          "key": "post_url",
+          "header": "Post URL",
+          "width": 45,
+          "visible": true
+        },
+        {
+          "key": "apply_link",
+          "header": "Apply Link",
+          "width": 45,
+          "visible": true
+        },
+        {
+          "key": "company_name",
+          "header": "Company Name",
+          "width": 24,
+          "visible": true
+        },
+        {
+          "key": "job_role",
+          "header": "Job Role",
+          "width": 28,
+          "visible": true
+        },
+        {
+          "key": "company_size",
+          "header": "Company Size",
+          "width": 18,
+          "visible": true
+        },
+        {
+          "key": "package_lpa",
+          "header": "Package (LPA)",
+          "width": 14,
+          "visible": true
+        },
+        {
+          "key": "description",
+          "header": "Description",
+          "width": 60,
+          "visible": true
+        },
+        {
+          "key": "post_id",
+          "header": "Post ID",
+          "width": 22,
+          "visible": true
+        }
+      ]
+    }
+  },
+  "browser": {
+    "headless_default": false,
+    "block_images": true
+  },
+  "output": {
+    "file_prefix": "aniket_projectmate"
+  },
+  "cursor": {
+    "enabled": true,
+    "interval_seconds": 60
+  }
+}

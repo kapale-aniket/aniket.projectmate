@@ -1,0 +1,8 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Student profile{% endblock %}
+{% block content %}
+<div class="ap-card">
+  <p class="mb-3">Open the students list and click a student name to view details in a modal.</p>
+  <a class="btn btn-ap" href="{% url 'adminpanel:students' %}">Back to students</a>
+</div>
+{% endblock %}

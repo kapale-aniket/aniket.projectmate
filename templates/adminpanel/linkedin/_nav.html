@@ -1,0 +1,17 @@
+{% comment %}Shared LinkedIn sub-nav{% endcomment %}
+<div class="ap-linkedin-nav mb-3">
+  <a href="{% url 'linkedin:home' %}" class="{% if linkedin_nav == 'home' %}active{% endif %}"><i class="fas fa-gauge"></i> Overview</a>
+  <a href="{% url 'linkedin:session' %}" class="{% if linkedin_nav == 'session' %}active{% endif %}"><i class="fas fa-key"></i> Session</a>
+  <a href="{% url 'linkedin:jobs' %}" class="{% if linkedin_nav == 'job' or linkedin_nav == 'jobs' %}active{% endif %}"><i class="fas fa-briefcase"></i> Jobs</a>
+  <a href="{% url 'linkedin:connections' %}" class="{% if linkedin_nav == 'connection' or linkedin_nav == 'connections' %}active{% endif %}"><i class="fas fa-user-plus"></i> Connections</a>
+  <a href="{% url 'linkedin:posts' %}" class="{% if linkedin_nav == 'posts' %}active{% endif %}"><i class="fas fa-newspaper"></i> Posts</a>
+  <a href="{% url 'linkedin:output' %}" class="{% if linkedin_nav == 'output' %}active{% endif %}"><i class="fas fa-file-excel"></i> Output</a>
+  <a href="{% url 'linkedin:logs' %}" class="{% if linkedin_nav == 'logs' %}active{% endif %}"><i class="fas fa-terminal"></i> Logs</a>
+  <a href="{% url 'linkedin:settings' %}" class="{% if linkedin_nav == 'settings' %}active{% endif %}"><i class="fas fa-sliders"></i> Settings</a>
+</div>
+{% if session %}
+<div class="small mb-3 {% if session.valid %}text-success{% else %}text-warning{% endif %}">
+  <i class="fas {% if session.valid %}fa-circle-check{% else %}fa-circle-exclamation{% endif %} me-1"></i>
+  {{ session.message }}
+</div>
+{% endif %}

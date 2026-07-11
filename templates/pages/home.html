@@ -1,0 +1,484 @@
+{% extends "base/base.html" %}
+{% load static %}
+
+{% block title %}{{ site_settings.site_name|default:"Aniket.ProjectMate" }} — {{ site_settings.tagline|default:"Learn. Build. Grow." }}{% endblock %}
+
+{% block content %}
+{# Hero #}
+<section class="pm-hero">
+  <div class="pm-hero-media" aria-hidden="true">
+    <img src="{% static 'img/hero1.png' %}" alt="" class="pm-hero-img" width="1920" height="1080" decoding="async" fetchpriority="high">
+  </div>
+  <div class="pm-hero-gradient" aria-hidden="true"></div>
+  <div class="pm-hero-shine" aria-hidden="true"></div>
+  <div class="pm-hero-orb pm-hero-orb--a" aria-hidden="true"></div>
+  <div class="pm-hero-orb pm-hero-orb--b" aria-hidden="true"></div>
+  <div class="container">
+    <div class="pm-hero-content">
+      <p class="pm-hero-eyebrow">Learn · Build · Grow</p>
+      <h1 class="pm-hero-brand">
+        {% if site_settings.site_name == "Aniket.ProjectMate" or not site_settings.site_name %}
+        Aniket.<em>ProjectMate</em>
+        {% else %}
+        {{ site_settings.site_name }}
+        {% endif %}
+      </h1>
+      <p class="pm-hero-lead">{{ site_settings.tagline|default:"Practical classes, real community, and rewards that keep you consistent — built for students who want to grow." }}</p>
+      <div class="pm-hero-cta">
+        <a href="{% url 'classes:list' %}" class="btn btn-pm btn-pm-glow">Explore Free Classes</a>
+        <a href="{% url 'accounts:register' %}" class="btn btn-pm-ghost">Join the Community</a>
+      </div>
+    </div>
+  </div>
+  <div class="pm-hero-scroll" aria-hidden="true"><span></span></div>
+</section>
+
+{# Latest Announcement #}
+{% if latest_announcement %}
+<section class="pm-section">
+  <div class="container">
+    <div class="pm-announce-card reveal">
+      <span class="pm-announce-eyebrow"><i class="fas fa-bullhorn me-1"></i> Latest Announcement</span>
+      <h2 class="pm-announce-title">{{ latest_announcement.title }}</h2>
+      <p class="pm-announce-text">{{ latest_announcement.summary|default:latest_announcement.content|truncatewords:40 }}</p>
+      <a href="{{ latest_announcement.get_absolute_url }}" class="btn btn-pm btn-sm">Read more</a>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# Community / Growing together #}
+<section class="pm-section pm-community">
+  <div class="container">
+    <div class="pm-community__inner reveal">
+      <div class="pm-community__copy">
+        <span class="pm-community__eyebrow">Community</span>
+        <h2 class="pm-community__title">Growing together</h2>
+        <p class="pm-community__lead">Students showing up, workshops running live, and paths opening for those ready to go further.</p>
+        <a href="{% url 'accounts:register' %}" class="pm-community__cta">Join the community <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+      </div>
+      <div class="pm-community__stats" role="list">
+        <div class="pm-community__stat" role="listitem">
+          <div class="pm-community__value" data-counter="{{ stats.students }}">0</div>
+          <div class="pm-community__label">Students</div>
+          <p class="pm-community__hint">Learning with us</p>
+        </div>
+        <div class="pm-community__stat" role="listitem">
+          <div class="pm-community__value" data-counter="{{ stats.workshops }}">0</div>
+          <div class="pm-community__label">Free workshops</div>
+          <p class="pm-community__hint">Live sessions</p>
+        </div>
+        <div class="pm-community__stat" role="listitem">
+          <div class="pm-community__value" data-counter="{{ stats.courses }}">0</div>
+          <div class="pm-community__label">Paid courses</div>
+          <p class="pm-community__hint">Structured paths</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+{# Upcoming Free Classes #}
+<section class="pm-section" id="free-classes">
+  <div class="container">
+    <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 reveal">
+      <div>
+        <span class="section-eyebrow">Free Classes</span>
+        <h2 class="section-title mb-1">Upcoming sessions</h2>
+        <p class="section-lead mb-0">Register free. Show up. Earn rewards.</p>
+      </div>
+      <a href="{% url 'classes:list' %}" class="btn btn-pm-outline btn-sm">View all</a>
+    </div>
+    <div class="row g-4">
+      {% for c in upcoming_free %}
+      <div class="col-md-6 col-lg-4 reveal">
+        <article class="glass-card h-100 overflow-hidden hover-lift hover-shine">
+          {% if c.banner %}
+          <img src="{{ c.banner.url }}" alt="" class="pm-card-img">
+          {% else %}
+          <div class="pm-card-img d-flex align-items-center justify-content-center text-white fs-1"><i class="fas fa-laptop-code"></i></div>
+          {% endif %}
+          <div class="p-4">
+            <span class="pm-badge mb-2">{{ c.technology }}</span>
+            <h3 class="h5 mb-2">{{ c.title }}</h3>
+            <p class="text-muted small mb-3">{{ c.description|truncatewords:18 }}</p>
+            <div class="d-flex justify-content-between align-items-center small text-muted mb-3">
+              <span><i class="far fa-calendar me-1"></i>{{ c.date|date:"M d, Y" }}</span>
+              <span><i class="far fa-clock me-1"></i>{{ c.start_time|time:"g:i A" }}</span>
+            </div>
+            {% if user.is_authenticated %}
+            <a href="{{ c.get_absolute_url }}" class="btn btn-pm w-100">View & Register</a>
+            {% else %}
+            <a href="{% url 'accounts:register' %}?next={{ c.get_absolute_url|urlencode }}" class="btn btn-pm w-100">Register</a>
+            {% endif %}
+          </div>
+        </article>
+      </div>
+      {% empty %}
+      <div class="col-12"><p class="text-muted">No upcoming free classes yet. Check back soon!</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{# Paid Courses #}
+<section class="pm-section pm-section-alt" id="paid-classes">
+  <div class="container">
+    <div class="d-flex flex-wrap justify-content-between align-items-end mb-4 reveal">
+      <div>
+        <span class="section-eyebrow">Paid Classes</span>
+        <h2 class="section-title mb-1">Structured learning paths</h2>
+        <p class="section-lead mb-0">Python, Django, SQL, JavaScript and more.</p>
+      </div>
+      <a href="{% url 'courses:list' %}" class="btn btn-pm-outline btn-sm">Browse courses</a>
+    </div>
+    <div class="row g-4">
+      {% for course in upcoming_paid %}
+      <div class="col-md-6 col-lg-4 reveal">
+        <article class="glass-card h-100 overflow-hidden hover-tilt hover-shine">
+          {% if course.image %}
+          <img src="{{ course.image.url }}" alt="" class="pm-card-img">
+          {% else %}
+          <div class="pm-card-img d-flex align-items-center justify-content-center text-white fs-1"><i class="fas fa-graduation-cap"></i></div>
+          {% endif %}
+          <div class="p-4">
+            <span class="pm-badge warning mb-2">{{ course.get_technology_display }}</span>
+            <h3 class="h5">{{ course.title }}</h3>
+            <p class="text-muted small">{{ course.short_description }}</p>
+            <div class="d-flex justify-content-between align-items-center mt-3">
+              <strong class="text-primary">₹{{ course.effective_price }}</strong>
+              <a href="{{ course.get_absolute_url }}" class="btn btn-pm btn-sm">Details</a>
+            </div>
+          </div>
+        </article>
+      </div>
+      {% empty %}
+      <div class="col-12"><p class="text-muted">Paid courses coming soon.</p></div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{# What you can learn — horizontal color rail (unique from Why section) #}
+{% if categories %}
+<section class="pm-section pm-learn">
+  <div class="container">
+    <div class="pm-learn__head reveal">
+      <div>
+        <span class="section-eyebrow">Categories</span>
+        <h2 class="pm-learn__headline">What you can learn</h2>
+      </div>
+      <p class="pm-learn__lead">Swipe through tracks — from first free session to deeper paid paths.</p>
+    </div>
+  </div>
+
+  <div class="pm-learn__rail-wrap reveal">
+    <div class="pm-learn__rail" data-learn-rail tabindex="0">
+      {% for cat in categories %}
+      <article class="pm-learn__panel" style="--learn-accent: {{ cat.color|default:'#1a365d' }}">
+        <span class="pm-learn__panel-bg" aria-hidden="true"></span>
+        <span class="pm-learn__panel-icon" aria-hidden="true">
+          <i class="fas {{ cat.icon|default:'fa-code' }}"></i>
+        </span>
+        <h3>{{ cat.name }}</h3>
+        <p>{{ cat.description|default:"Explore this track with live classes and guided practice."|truncatewords:14 }}</p>
+        <span class="pm-learn__panel-mark" aria-hidden="true">{% if forloop.counter < 10 %}0{% endif %}{{ forloop.counter }}</span>
+      </article>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="pm-learn__foot reveal">
+      <div class="pm-learn__nav">
+        <button type="button" class="pm-learn__nav-btn" data-learn-prev aria-label="Previous topics">
+          <i class="fas fa-arrow-left" aria-hidden="true"></i>
+        </button>
+        <button type="button" class="pm-learn__nav-btn" data-learn-next aria-label="Next topics">
+          <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </button>
+      </div>
+      <a href="{% url 'courses:list' %}" class="pm-learn__link">Browse all courses <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# Why learn with us — journey layout (no cards) #}
+<section class="pm-section pm-why">
+  <div class="container">
+    <div class="pm-why__grid">
+      <div class="pm-why__aside reveal">
+        <span class="section-eyebrow">Why ProjectMate</span>
+        <h2 class="pm-why__headline">Why learn<br>with us</h2>
+        <p class="pm-why__lead">{{ site_settings.why_learn_with_us|default:"Live free classes, structured paid paths, attendance tracking, and rewards that keep you consistent — with a mentor who shows up for students." }}</p>
+
+        <div class="pm-why__mentor">
+          {% if site_settings.mentor_photo %}
+          <img src="{{ site_settings.mentor_photo.url }}" alt="" class="pm-why__mentor-photo">
+          {% else %}
+          <span class="pm-why__mentor-photo pm-why__mentor-photo--ph" aria-hidden="true"><i class="fas fa-user"></i></span>
+          {% endif %}
+          <div>
+            <p class="pm-why__mentor-name">{{ site_settings.mentor_name|default:"Aniket" }}</p>
+            <p class="pm-why__mentor-role">{{ site_settings.mentor_title|default:"Founder & Mentor" }}</p>
+          </div>
+        </div>
+        <a href="{% url 'core:about' %}" class="pm-why__link">Meet the mentor <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
+      </div>
+
+      <ol class="pm-why__path">
+        <li class="pm-why__step reveal">
+          <span class="pm-why__num" aria-hidden="true">01</span>
+          <div class="pm-why__step-body">
+            <h3>Live free classes</h3>
+            <p>Real Google Meet sessions — show up live, ask questions, and learn with the room.</p>
+          </div>
+        </li>
+        <li class="pm-why__step reveal">
+          <span class="pm-why__num" aria-hidden="true">02</span>
+          <div class="pm-why__step-body">
+            <h3>Structured paid paths</h3>
+            <p>When you’re ready to go deeper, follow clear course tracks with guided projects.</p>
+          </div>
+        </li>
+        <li class="pm-why__step reveal">
+          <span class="pm-why__num" aria-hidden="true">03</span>
+          <div class="pm-why__step-body">
+            <h3>Attendance that counts</h3>
+            <p>Every session is tracked so your consistency is visible — not just claimed.</p>
+          </div>
+        </li>
+        <li class="pm-why__step reveal">
+          <span class="pm-why__num" aria-hidden="true">04</span>
+          <div class="pm-why__step-body">
+            <h3>Rewards &amp; growth</h3>
+            <p>Points, referrals, and resume review for learners who keep showing up.</p>
+          </div>
+        </li>
+      </ol>
+    </div>
+  </div>
+</section>
+
+{# Testimonials — 4 cards per row, slide for more #}
+{% if testimonials %}
+<section class="pm-section" id="testimonials">
+  <div class="container">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-4 reveal">
+      <div>
+        <span class="section-eyebrow">Feedback</span>
+        <h2 class="section-title mb-0">What students say</h2>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        {% if testimonials|length > 4 %}
+        <div class="pm-feedback-slider__nav">
+          <button type="button" class="pm-feedback-slider__btn" data-slider-prev aria-label="Previous feedback">
+            <i class="fas fa-chevron-left" aria-hidden="true"></i>
+          </button>
+          <button type="button" class="pm-feedback-slider__btn" data-slider-next aria-label="Next feedback">
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+          </button>
+        </div>
+        {% endif %}
+        <a href="{% url 'feedback:testimonials' %}" class="btn btn-pm-outline btn-sm" hx-boost="false">View all</a>
+      </div>
+    </div>
+
+    <div class="pm-feedback-slider reveal" data-feedback-slider>
+      <div class="pm-feedback-slider__track" data-slider-track tabindex="0" role="list">
+        {% for t in testimonials %}
+        <div class="pm-feedback-slider__slide" role="listitem">
+          {% include "components/testimonial_card.html" with t=t %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# Gallery #}
+{% if gallery %}
+<section class="pm-section">
+  <div class="container">
+    <div class="text-center mb-4 reveal">
+      <span class="section-eyebrow">Gallery</span>
+      <h2 class="section-title">Moments from the community</h2>
+    </div>
+    <div class="gallery-grid reveal">
+      {% for g in gallery %}
+      <div class="gallery-item">
+        <img src="{{ g.image.url }}" alt="{{ g.title }}" loading="lazy">
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# Stay connected — Instagram / WhatsApp #}
+<section class="pm-section pm-connect">
+  <div class="container">
+    <div class="pm-connect__head reveal">
+      <span class="section-eyebrow">Stay connected</span>
+      <h2 class="pm-connect__title">Join the conversation</h2>
+    </div>
+
+    <div class="pm-connect__split reveal">
+      {% if site_settings.instagram_url %}
+      <a href="{{ site_settings.instagram_url }}" class="pm-connect__panel pm-connect__panel--ig" target="_blank" rel="noopener">
+      {% else %}
+      <div class="pm-connect__panel pm-connect__panel--ig pm-connect__panel--soon">
+      {% endif %}
+        <span class="pm-connect__glow" aria-hidden="true"></span>
+        <i class="fab fa-instagram pm-connect__brand-icon" aria-hidden="true"></i>
+        <div class="pm-connect__copy">
+          <h3>Instagram</h3>
+          <p>Daily tips, class updates, and student wins.</p>
+          <span class="pm-connect__action">
+            {% if site_settings.instagram_url %}Follow us{% else %}Link coming soon{% endif %}
+            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+          </span>
+        </div>
+      {% if site_settings.instagram_url %}</a>{% else %}</div>{% endif %}
+
+      {% if site_settings.whatsapp_url %}
+      <a href="{{ site_settings.whatsapp_url }}" class="pm-connect__panel pm-connect__panel--wa" target="_blank" rel="noopener">
+      {% else %}
+      <div class="pm-connect__panel pm-connect__panel--wa pm-connect__panel--soon">
+      {% endif %}
+        <span class="pm-connect__glow" aria-hidden="true"></span>
+        <i class="fab fa-whatsapp pm-connect__brand-icon" aria-hidden="true"></i>
+        <div class="pm-connect__copy">
+          <h3>WhatsApp Community</h3>
+          <p>Get reminders, ask doubts, stay connected.</p>
+          <span class="pm-connect__action">
+            {% if site_settings.whatsapp_url %}Join community{% else %}Link coming soon{% endif %}
+            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+          </span>
+        </div>
+      {% if site_settings.whatsapp_url %}</a>{% else %}</div>{% endif %}
+    </div>
+  </div>
+</section>
+
+{# FAQ #}
+{% if faqs %}
+<section class="pm-section" id="faq">
+  <div class="container" style="max-width:760px">
+    <div class="text-center mb-4 reveal">
+      <span class="section-eyebrow">FAQ</span>
+      <h2 class="section-title">Frequently asked questions</h2>
+    </div>
+    <div class="accordion accordion-pm reveal" id="faqAccordion">
+      {% for faq in faqs %}
+      <div class="accordion-item">
+        <h3 class="accordion-header">
+          <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#faq{{ faq.id }}">
+            {{ faq.question }}
+          </button>
+        </h3>
+        <div id="faq{{ faq.id }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" data-bs-parent="#faqAccordion">
+          <div class="accordion-body">{{ faq.answer|linebreaks }}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# Latest updates — compact mosaic (last 15 days) #}
+{% if announcements %}
+<section class="pm-section pm-updates">
+  <div class="container">
+    <div class="pm-updates__bar reveal">
+      <h2 class="pm-updates__title"><span>Updates</span> Latest updates</h2>
+      <a href="{% url 'announcements:list' %}" class="btn btn-pm-outline btn-sm">View all</a>
+    </div>
+
+    <div class="pm-updates__grid">
+      {% for a in announcements %}
+      <a href="{{ a.get_absolute_url }}" class="pm-updates__tile reveal{% if forloop.first %} pm-updates__tile--lead{% endif %}">
+        <div class="pm-updates__tile-top">
+          <span class="pm-updates__cat">{{ a.get_category_display }}</span>
+          <time datetime="{{ a.published_at|default:a.created_at|date:'c' }}">{{ a.published_at|default:a.created_at|date:"d M" }}</time>
+        </div>
+        <h3>{{ a.title }}</h3>
+        <p>{{ a.summary|default:a.content|truncatewords:16 }}</p>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{# Contact #}
+<section class="pm-section pm-contact" id="contact">
+  <div class="container">
+    <div class="pm-contact__grid reveal">
+      <div class="pm-contact__aside">
+        <span class="pm-contact__eyebrow">Contact</span>
+        <h2 class="pm-contact__title">Get in touch</h2>
+        <p class="pm-contact__lead">Questions about classes, courses, or joining the community? Send a message — we read every one.</p>
+
+        <ul class="pm-contact__meta">
+          {% if site_settings.contact_email %}
+          <li>
+            <span class="pm-contact__meta-icon" aria-hidden="true"><i class="fas fa-envelope"></i></span>
+            <div>
+              <span class="pm-contact__meta-label">Email</span>
+              <a href="mailto:{{ site_settings.contact_email }}">{{ site_settings.contact_email }}</a>
+            </div>
+          </li>
+          {% endif %}
+          {% if site_settings.contact_phone %}
+          <li>
+            <span class="pm-contact__meta-icon" aria-hidden="true"><i class="fas fa-phone"></i></span>
+            <div>
+              <span class="pm-contact__meta-label">Phone</span>
+              <a href="tel:{{ site_settings.contact_phone }}">{{ site_settings.contact_phone }}</a>
+            </div>
+          </li>
+          {% endif %}
+          {% if site_settings.whatsapp_url %}
+          <li>
+            <span class="pm-contact__meta-icon" aria-hidden="true"><i class="fab fa-whatsapp"></i></span>
+            <div>
+              <span class="pm-contact__meta-label">WhatsApp</span>
+              <a href="{{ site_settings.whatsapp_url }}" target="_blank" rel="noopener">Message the community</a>
+            </div>
+          </li>
+          {% endif %}
+        </ul>
+      </div>
+
+      <form class="pm-contact__form" method="post" action="{% url 'core:contact' %}">
+        {% csrf_token %}
+        <div class="pm-contact__fields">
+          <div class="pm-contact__field">
+            <label class="form-label" for="id_name">Name</label>
+            {{ contact_form.name }}
+          </div>
+          <div class="pm-contact__field">
+            <label class="form-label" for="id_email">Email</label>
+            {{ contact_form.email }}
+          </div>
+          <div class="pm-contact__field pm-contact__field--full">
+            <label class="form-label" for="id_subject">Subject</label>
+            {{ contact_form.subject }}
+          </div>
+          <div class="pm-contact__field pm-contact__field--full">
+            <label class="form-label" for="id_message">Message</label>
+            {{ contact_form.message }}
+          </div>
+        </div>
+        <button type="submit" class="btn btn-pm btn-pm-glow">
+          Send message <i class="fas fa-paper-plane ms-1" aria-hidden="true"></i>
+        </button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

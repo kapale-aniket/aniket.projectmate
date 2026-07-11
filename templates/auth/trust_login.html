@@ -1,0 +1,17 @@
+{% extends "base/base.html" %}
+{% block title %}Sign in required — Aniket.ProjectMate{% endblock %}
+{% block content %}
+<section class="auth-shell">
+  <div class="container">
+    <div class="glass-card auth-card no-hover text-center">
+      <i class="fas fa-shield-halved fa-3x text-primary mb-3"></i>
+      <h1 class="h3 display-font mb-3">Almost there</h1>
+      <div class="trust-banner text-start">
+        {{ site_settings.login_trust_message }}
+      </div>
+      <a href="{% url 'accounts:login' %}?next={{ next|urlencode }}" class="btn btn-pm w-100 mb-2">Continue to sign in</a>
+      <a href="{% url 'accounts:register' %}?next={{ next|urlencode }}" class="btn btn-pm-outline w-100">Create a free account</a>
+    </div>
+  </div>
+</section>
+{% endblock %}

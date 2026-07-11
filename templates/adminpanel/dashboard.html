@@ -1,0 +1,216 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'adminpanel:students' %}" class="ap-metric ap-metric--teal text-decoration-none">
+      <div class="ap-metric__icon"><i class="fas fa-users"></i></div>
+      <div>
+        <div class="ap-metric__num">{{ total_students }}</div>
+        <div class="ap-metric__lbl">Students</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'adminpanel:classes' %}" class="ap-metric ap-metric--sky text-decoration-none">
+      <div class="ap-metric__icon"><i class="fas fa-clipboard-list"></i></div>
+      <div>
+        <div class="ap-metric__num">{{ total_free_regs }}</div>
+        <div class="ap-metric__lbl">Free registrations</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'adminpanel:courses' %}" class="ap-metric ap-metric--amber text-decoration-none">
+      <div class="ap-metric__icon"><i class="fas fa-graduation-cap"></i></div>
+      <div>
+        <div class="ap-metric__num">{{ total_paid_enrolls }}</div>
+        <div class="ap-metric__lbl">Paid enrollments</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="ap-metric ap-metric--emerald">
+      <div class="ap-metric__icon"><i class="fas fa-indian-rupee-sign"></i></div>
+      <div>
+        <div class="ap-metric__num">₹{{ revenue|floatformat:0 }}</div>
+        <div class="ap-metric__lbl">Revenue</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'adminpanel:attendance' %}" class="ap-metric ap-metric--teal text-decoration-none">
+      <div class="ap-metric__icon"><i class="fas fa-chart-line"></i></div>
+      <div>
+        <div class="ap-metric__num">{{ attendance_avg }}%</div>
+        <div class="ap-metric__lbl">Attendance avg</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="ap-metric ap-metric--sky">
+      <div class="ap-metric__icon"><i class="fas fa-calendar-day"></i></div>
+      <div>
+        <div class="ap-metric__num">{{ today_regs }}</div>
+        <div class="ap-metric__lbl">Today’s registrations</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'adminpanel:community' %}?tab=resumes" class="ap-metric ap-metric--rose text-decoration-none">
+      <div class="ap-metric__icon"><i class="fas fa-file-lines"></i></div>
+      <div>
+        <div class="ap-metric__num">{{ pending_resumes }}</div>
+        <div class="ap-metric__lbl">Pending resumes</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-lg-3">
+    <a href="{% url 'adminpanel:community' %}?tab=feedback" class="ap-metric ap-metric--slate text-decoration-none">
+      <div class="ap-metric__icon"><i class="fas fa-comments"></i></div>
+      <div>
+        <div class="ap-metric__num">{{ pending_feedback }}</div>
+        <div class="ap-metric__lbl">Pending feedback</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    {# Student growth — CSS day bars, not a chart #}
+    <div class="ap-card ap-growth mb-3">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+          <h2 class="h6 mb-1">Student growth</h2>
+          <p class="small text-muted mb-0">New joins over the last 14 days</p>
+        </div>
+        <div class="ap-growth__summary">
+          <div class="ap-growth__stat">
+            <span class="ap-growth__stat-num">{{ new_today }}</span>
+            <span class="ap-growth__stat-lbl">Today</span>
+          </div>
+          <div class="ap-growth__stat">
+            <span class="ap-growth__stat-num">{{ week_new }}</span>
+            <span class="ap-growth__stat-lbl">This week</span>
+          </div>
+          <div class="ap-growth__stat {% if week_delta_pct >= 0 %}is-up{% else %}is-down{% endif %}">
+            <span class="ap-growth__stat-num">
+              {% if week_delta_pct >= 0 %}+{% endif %}{{ week_delta_pct }}%
+            </span>
+            <span class="ap-growth__stat-lbl">vs last week</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="ap-growth__bars" role="img" aria-label="Daily new student counts">
+        {% for day in growth_days %}
+        <div class="ap-growth__col{% if day.is_today %} is-today{% endif %}" title="{{ day.date|date:'M j' }}: {{ day.count }} new">
+          <div class="ap-growth__count">{{ day.count }}</div>
+          <div class="ap-growth__bar-wrap">
+            <div class="ap-growth__bar" style="--h: {{ day.height }}%"></div>
+          </div>
+          <div class="ap-growth__day">{{ day.label }}</div>
+          <div class="ap-growth__date">{{ day.day_num }}</div>
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if recent_students %}
+      <div class="ap-growth__recent mt-4 pt-3 border-top">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h3 class="h6 mb-0">Newest students</h3>
+          <a class="small" href="{% url 'adminpanel:students' %}">View all</a>
+        </div>
+        <div class="ap-avatar-row">
+          {% for p in recent_students %}
+          <div class="ap-avatar-chip" title="{{ p.user.email }}">
+            <span class="ap-avatar-chip__mark">{{ p.user.first_name|default:p.user.email|slice:":1"|upper }}</span>
+            <span class="ap-avatar-chip__meta">
+              <strong>{{ p.user.get_full_name|default:p.user.email|truncatechars:18 }}</strong>
+              <small>{{ p.user.date_joined|timesince }} ago</small>
+            </span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="ap-card">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h6 mb-0">Upcoming classes</h2>
+        <a class="small" href="{% url 'adminpanel:classes' %}">Manage</a>
+      </div>
+      {% for c in upcoming_classes %}
+      <div class="ap-class-row">
+        <div class="ap-class-row__date">
+          <span class="ap-class-row__mon">{{ c.date|date:"M" }}</span>
+          <span class="ap-class-row__day">{{ c.date|date:"d" }}</span>
+        </div>
+        <div class="ap-class-row__body">
+          <div class="fw-semibold">{{ c.title }}</div>
+          <div class="small text-muted">{{ c.start_time|time:"g:i A" }}{% if c.technology %} · {{ c.technology }}{% endif %}</div>
+        </div>
+        {% if c.can_mark_attendance %}
+        <a class="btn btn-outline-secondary btn-icon" href="{% url 'adminpanel:attendance_mark' c.pk %}"
+           data-bs-toggle="tooltip" title="Mark attendance"><i class="fas fa-clipboard-check"></i></a>
+        {% endif %}
+      </div>
+      {% empty %}
+      <p class="text-muted small mb-0">No upcoming classes.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="ap-card mb-3">
+      <h2 class="h6 mb-3">Quick actions</h2>
+      <div class="ap-quick-grid">
+        <button type="button" class="ap-quick"
+                hx-get="{% url 'adminpanel:class_create' %}"
+                hx-target="#apFormModalBody"
+                hx-swap="innerHTML">
+          <i class="fas fa-chalkboard"></i>
+          <span>Post class</span>
+        </button>
+        <button type="button" class="ap-quick"
+                hx-get="{% url 'adminpanel:announcement_create' %}"
+                hx-target="#apFormModalBody"
+                hx-swap="innerHTML">
+          <i class="fas fa-bullhorn"></i>
+          <span>Announce</span>
+        </button>
+        <button type="button" class="ap-quick"
+                hx-get="{% url 'adminpanel:tools' %}?tab=emails"
+                hx-target="#apToolsModalBody"
+                hx-swap="innerHTML">
+          <i class="fas fa-wrench"></i>
+          <span>Tools</span>
+        </button>
+        <a class="ap-quick" href="{% url 'adminpanel:attendance' %}">
+          <i class="fas fa-calendar-check"></i>
+          <span>Attendance</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="ap-card">
+      <h2 class="h6 mb-3">Recent activity</h2>
+      <div class="ap-activity">
+        {% for a in recent_activities %}
+        <div class="ap-activity__item">
+          <span class="ap-activity__dot"></span>
+          <div>
+            <div class="small">{{ a.action|truncatechars:52 }}</div>
+            <div class="ap-activity__meta">{{ a.user.email|default:"system" }} · {{ a.created_at|timesince }} ago</div>
+          </div>
+        </div>
+        {% empty %}
+        <p class="text-muted small mb-0">No activity yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

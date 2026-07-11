@@ -1,0 +1,7 @@
+{
+  "enabled": true,
+  "interval_seconds": 60,
+  "move_steps_min": 8,
+  "move_steps_max": 20,
+  "margin_pixels": 80
+}

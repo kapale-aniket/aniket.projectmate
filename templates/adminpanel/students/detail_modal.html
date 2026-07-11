@@ -1,0 +1,119 @@
+<h2 class="h5 mb-3" id="apFormModalLabel">Student details</h2>
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+  <div>
+    <div class="fw-semibold fs-5">{{ profile.user.get_full_name|default:profile.user.email }}</div>
+    <div class="small text-muted">{{ profile.user.email }}</div>
+  </div>
+  <div>
+    {% if profile.user.is_active %}
+    <span class="badge text-bg-success">Active</span>
+    {% else %}
+    <span class="badge text-bg-secondary">Inactive</span>
+    {% endif %}
+    <span class="badge text-bg-light text-dark border">Level {{ profile.level }}</span>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="border rounded-3 p-2 h-100">
+      <div class="small text-muted">Points</div>
+      <div class="fw-semibold">{{ profile.reward_points }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="border rounded-3 p-2 h-100">
+      <div class="small text-muted">Attendance</div>
+      <div class="fw-semibold">{{ profile.attendance_percentage }}%</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="border rounded-3 p-2 h-100">
+      <div class="small text-muted">Streak</div>
+      <div class="fw-semibold">{{ profile.consecutive_attendance }}</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="border rounded-3 p-2 h-100">
+      <div class="small text-muted">Referral</div>
+      <div class="fw-semibold small">{{ profile.referral_code|default:"—" }}</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6">
+    <div class="small text-muted">Phone</div>
+    <div>{{ profile.phone|default:"—" }}</div>
+  </div>
+  <div class="col-md-6">
+    <div class="small text-muted">City</div>
+    <div>{{ profile.city|default:"—" }}</div>
+  </div>
+  <div class="col-md-6">
+    <div class="small text-muted">College</div>
+    <div>{{ profile.college|default:"—" }}</div>
+  </div>
+  <div class="col-md-6">
+    <div class="small text-muted">College location</div>
+    <div>{{ profile.college_location|default:"—" }}</div>
+  </div>
+  <div class="col-md-6">
+    <div class="small text-muted">Branch / Year</div>
+    <div>{{ profile.branch|default:"—" }} · {{ profile.get_year_display|default:profile.year|default:"—" }}</div>
+  </div>
+  <div class="col-12">
+    <div class="small text-muted">Skills</div>
+    <div>{{ profile.skills|default:"—" }}</div>
+  </div>
+  {% if profile.bio %}
+  <div class="col-12">
+    <div class="small text-muted">Bio</div>
+    <div>{{ profile.bio }}</div>
+  </div>
+  {% endif %}
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <h3 class="h6">Registered classes</h3>
+    <div class="small border rounded-3 p-2" style="max-height:140px;overflow:auto">
+      {% for r in registrations %}
+      <div class="py-1 border-bottom">{{ r.free_class.title }} — {{ r.get_status_display }}</div>
+      {% empty %}<span class="text-muted">None</span>{% endfor %}
+    </div>
+  </div>
+  <div class="col-md-6">
+    <h3 class="h6">Course enrollments</h3>
+    <div class="small border rounded-3 p-2" style="max-height:140px;overflow:auto">
+      {% for e in enrollments %}
+      <div class="py-1 border-bottom">{{ e.course.title }} — {{ e.get_status_display }}</div>
+      {% empty %}<span class="text-muted">None</span>{% endfor %}
+    </div>
+  </div>
+  <div class="col-md-6">
+    <h3 class="h6">Recent attendance</h3>
+    <div class="small border rounded-3 p-2" style="max-height:140px;overflow:auto">
+      {% for a in attendance %}
+      <div class="py-1 border-bottom">{{ a.free_class.title }}: {{ a.get_status_display }}</div>
+      {% empty %}<span class="text-muted">None</span>{% endfor %}
+    </div>
+  </div>
+  <div class="col-md-6">
+    <h3 class="h6">Rewards / referrals</h3>
+    <div class="small border rounded-3 p-2" style="max-height:140px;overflow:auto">
+      {% for r in rewards %}
+      <div class="py-1 border-bottom">{{ r.points|stringformat:"+d" }} {{ r.description|default:r.get_reason_display }}</div>
+      {% endfor %}
+      {% for r in referrals %}
+      <div class="py-1 border-bottom">Ref: {{ r.referred_user.email }} ({{ r.status }})</div>
+      {% endfor %}
+      {% if not rewards and not referrals %}<span class="text-muted">None</span>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="d-flex justify-content-end mt-3">
+  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+</div>

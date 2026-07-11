@@ -1,0 +1,22 @@
+{% extends "base/base.html" %}
+{% block title %}Notifications — Dashboard{% endblock %}
+{% block content %}
+<section class="pm-section"><div class="container"><div class="row g-4">
+  <div class="col-lg-3">{% include "dashboard/sidebar.html" %}</div>
+  <div class="col-lg-9" id="dash-content">
+    <h1 class="h3 display-font mb-4">Notifications</h1>
+    {% for n in notifications %}
+    <div class="glass-card p-3 mb-2 no-hover">
+      <div class="d-flex justify-content-between">
+        <strong>{{ n.title }}</strong>
+        <span class="small text-muted">{{ n.created_at|timesince }} ago</span>
+      </div>
+      <p class="mb-0 small text-muted">{{ n.message }}</p>
+    </div>
+    {% empty %}
+    <p class="text-muted">You're all caught up.</p>
+    {% endfor %}
+    {% include "components/pagination.html" %}
+  </div>
+</div></div></section>
+{% endblock %}

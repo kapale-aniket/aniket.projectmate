@@ -1,0 +1,77 @@
+{% extends "adminpanel/base.html" %}
+{% load static %}
+{% block page_title %}LinkedIn settings{% endblock %}
+{% block extra_css %}<link href="{% static 'css/linkedin-admin.css' %}" rel="stylesheet">{% endblock %}
+{% block content %}
+{% include "adminpanel/linkedin/_nav.html" %}
+{% csrf_token %}
+<div class="ap-card">
+  <h2 class="h6 mb-3">LinkedIn automation settings</h2>
+  {% if config_locked %}
+  <div class="alert alert-warning py-2 small">{{ config_lock_message }}</div>
+  {% endif %}
+  <ul class="nav nav-pills mb-3 flex-wrap gap-1">
+    <li class="nav-item"><a class="nav-link {% if settings_tab == 'job' %}active{% endif %}" href="?tab=job">Jobs</a></li>
+    <li class="nav-item"><a class="nav-link {% if settings_tab == 'connection' %}active{% endif %}" href="?tab=connection">Connections</a></li>
+    <li class="nav-item"><a class="nav-link {% if settings_tab == 'posts' %}active{% endif %}" href="?tab=posts">Posts</a></li>
+    <li class="nav-item"><a class="nav-link {% if settings_tab == 'browser' %}active{% endif %}" href="?tab=browser">Browser</a></li>
+    <li class="nav-item"><a class="nav-link {% if settings_tab == 'cursor' %}active{% endif %}" href="?tab=cursor">Screen awake</a></li>
+  </ul>
+
+  <form id="liSettingsForm" data-settings-tab="{{ settings_tab }}">
+    {{ settings_form.job_excel_format }}
+    {{ settings_form.connection_excel_format }}
+    {{ settings_form.posts_excel_format }}
+
+    {% if settings_tab == 'job' %}
+    <div class="mb-3"><label class="form-label">Default keywords</label>{{ settings_form.job_keywords }}</div>
+    <div class="mb-3"><label class="form-label">Default locations</label>{{ settings_form.job_locations }}</div>
+    <div class="row g-2 mb-3">
+      <div class="col-md-3"><label class="form-label">Max pages</label>{{ settings_form.job_max_pages }}</div>
+      <div class="col-md-3"><label class="form-label">Max jobs</label>{{ settings_form.job_max_jobs }}</div>
+      <div class="col-md-3"><label class="form-label">Job age (h)</label>{{ settings_form.job_max_age_hours }}</div>
+      <div class="col-md-3"><label class="form-label">Min delay</label>{{ settings_form.job_min_delay }}</div>
+      <div class="col-md-3"><label class="form-label">Max delay</label>{{ settings_form.job_max_delay }}</div>
+    </div>
+    {% include "adminpanel/linkedin/_excel_format_editor.html" with scraper_type="job" scraper_label="Job scraper" %}
+    {% elif settings_tab == 'connection' %}
+    <div class="mb-3"><label class="form-label">Default keywords</label>{{ settings_form.connection_keywords }}</div>
+    <div class="mb-3"><label class="form-label">Default locations</label>{{ settings_form.connection_locations }}</div>
+    <div class="row g-2 mb-3">
+      <div class="col-md-4"><label class="form-label">Max connections</label>{{ settings_form.connection_max }}</div>
+      <div class="col-md-4"><label class="form-label">Max pages</label>{{ settings_form.connection_max_pages }}</div>
+    </div>
+    {% include "adminpanel/linkedin/_excel_format_editor.html" with scraper_type="connection" scraper_label="Connection scraper" %}
+    {% elif settings_tab == 'posts' %}
+    <div class="row g-2 mb-3">
+      <div class="col-md-4"><label class="form-label">Max scroll rounds</label>{{ settings_form.posts_max_scroll }}</div>
+      <div class="col-md-4"><label class="form-label">Max posts</label>{{ settings_form.posts_max_posts }}</div>
+    </div>
+    {% include "adminpanel/linkedin/_excel_format_editor.html" with scraper_type="posts" scraper_label="Posts scraper" %}
+    {% elif settings_tab == 'browser' %}
+    <div class="form-check mb-3">
+      {{ settings_form.browser_headless }}
+      <label class="form-check-label" for="{{ settings_form.browser_headless.id_for_label }}">Headless by default (session login always shows a window)</label>
+    </div>
+    {% elif settings_tab == 'cursor' %}
+    <div class="form-check mb-3">
+      {{ settings_form.cursor_enabled }}
+      <label class="form-check-label" for="{{ settings_form.cursor_enabled.id_for_label }}">Keep screen awake while scraping</label>
+    </div>
+    <div class="mb-3" style="max-width:200px">
+      <label class="form-label">Ping interval (seconds)</label>
+      {{ settings_form.cursor_interval_seconds }}
+    </div>
+    {% endif %}
+
+    <button type="button" class="btn btn-ap mt-3" id="liSaveSettings" {% if config_locked %}disabled{% endif %}>
+      <i class="fas fa-save me-1"></i> Save settings
+    </button>
+  </form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/excel-format-editor.js' %}"></script>
+<script src="{% static 'js/linkedin-admin.js' %}"></script>
+<script>PMLinkedIn.init({ apiBase: "{% url 'linkedin:home' %}", features: { settingsOnly: true } });</script>
+{% endblock %}

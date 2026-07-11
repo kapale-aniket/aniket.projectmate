@@ -1,0 +1,7 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Course form{% endblock %}
+{% block content %}
+<div class="ap-card"><form method="post" enctype="multipart/form-data">{% csrf_token %}
+<div class="row g-3">{% for field in form %}<div class="col-md-6"><label class="form-label">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}
+<div class="col-12"><button class="btn btn-ap" type="submit">Save</button></div></div></form></div>
+{% endblock %}

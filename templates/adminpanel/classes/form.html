@@ -1,0 +1,17 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}{% if object %}Edit{% else %}Create{% endif %} free class{% endblock %}
+{% block content %}
+<div class="ap-card">
+  <form method="post" enctype="multipart/form-data">{% csrf_token %}
+    <div class="row g-3">
+      {% for field in form %}
+      <div class="col-md-{% if field.name in 'description,preparation_guide,important_instructions,meeting_instructions' %}12{% else %}6{% endif %}">
+        <label class="form-label">{{ field.label }}</label>
+        {{ field }}{{ field.errors }}
+      </div>
+      {% endfor %}
+      <div class="col-12"><button class="btn btn-ap" type="submit">Save class</button></div>
+    </div>
+  </form>
+</div>
+{% endblock %}

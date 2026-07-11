@@ -1,0 +1,57 @@
+{% extends "base/base.html" %}
+{% block title %}{{ free_class.title }} — Free Class{% endblock %}
+{% block content %}
+<section class="pm-section">
+  <div class="container" style="max-width:860px">
+    <div class="glass-card overflow-hidden no-hover">
+      <div class="pm-card-img d-flex align-items-center justify-content-center text-white" style="height:220px">
+        {% if free_class.banner %}<img src="{{ free_class.banner.url }}" class="w-100 h-100" style="object-fit:cover" alt="">{% else %}<i class="fas fa-chalkboard-teacher fa-3x"></i>{% endif %}
+      </div>
+      <div class="p-4 p-md-5">
+        <span class="pm-badge mb-2">{{ free_class.technology }}</span>
+        <h1 class="display-font h2 mb-3">{{ free_class.title }}</h1>
+        <div class="d-flex flex-wrap gap-3 text-muted small mb-4">
+          <span><i class="far fa-calendar me-1"></i>{{ free_class.date|date:"l, M d, Y" }}</span>
+          <span><i class="far fa-clock me-1"></i>{{ free_class.start_time|time:"g:i A" }}</span>
+          <span><i class="fas fa-hourglass-half me-1"></i>{{ free_class.duration_minutes }} min</span>
+          <span><i class="fas fa-user me-1"></i>{{ free_class.instructor_name }}</span>
+          <span><i class="fas fa-chair me-1"></i>{{ free_class.seats_left }} / {{ free_class.max_seats }} seats</span>
+        </div>
+        <div class="mb-4">{{ free_class.description|linebreaks }}</div>
+        {% if free_class.preparation_guide %}
+        <div class="trust-banner"><strong>Preparation:</strong> {{ free_class.preparation_guide|linebreaksbr }}</div>
+        {% endif %}
+
+        {% if is_registered %}
+        <div class="alert alert-success mt-4 mb-0">
+          <strong>You’re registered!</strong>
+          Check your registered email for the session Meet link.
+        </div>
+        {% elif free_class.is_registration_open %}
+          {% if user.is_authenticated and register_form %}
+          <hr class="my-4" style="border-color:var(--pm-border)">
+          <h2 class="h5 mb-1">Register for this free class</h2>
+          <p class="small text-muted mb-0">Follow our community, then register.</p>
+          {% url 'classes:register' free_class.slug as reg_url %}
+          {% include "components/class_register_form.html" with form=register_form action_url=reg_url submit_label="Register" %}
+          {% else %}
+          <div class="mt-4">
+            <a href="{% url 'accounts:register' %}?next={% url 'classes:detail' free_class.slug %}"
+               class="btn btn-pm btn-lg">Create account to register</a>
+            <p class="small text-muted mt-2 mb-0">
+              Already have an account?
+              <a href="{% url 'accounts:login' %}?next={% url 'classes:detail' free_class.slug %}">Sign in</a>
+              — then register on this page.
+            </p>
+          </div>
+          {% endif %}
+        {% elif free_class.has_ended or free_class.status == 'completed' %}
+        <div class="alert alert-secondary mt-4 mb-0">This class has ended. Registration is closed.</div>
+        {% else %}
+        <div class="alert alert-warning mt-4 mb-0">Registration is closed for this class.</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

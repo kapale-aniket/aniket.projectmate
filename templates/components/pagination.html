@@ -1,0 +1,22 @@
+{# Expects page_obj. Optional: page_param (default "page"), hx_target for HTMX lists #}
+{% if page_obj and page_obj.has_other_pages %}
+{% with param=page_param|default:"page" %}
+<ul class="pagination justify-content-center flex-wrap mb-0 mt-3">
+  {% if page_obj.has_previous %}
+  <li class="page-item">
+    <a class="page-link"
+       href="?{% for key,value in request.GET.items %}{% if key != param %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}{{ param }}={{ page_obj.previous_page_number }}"
+       {% if hx_target %}hx-get="?{% for key,value in request.GET.items %}{% if key != param %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}{{ param }}={{ page_obj.previous_page_number }}" hx-target="{{ hx_target }}" hx-swap="{{ hx_swap|default:'innerHTML' }}"{% endif %}>Prev</a>
+  </li>
+  {% endif %}
+  <li class="page-item disabled"><span class="page-link">{{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span></li>
+  {% if page_obj.has_next %}
+  <li class="page-item">
+    <a class="page-link"
+       href="?{% for key,value in request.GET.items %}{% if key != param %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}{{ param }}={{ page_obj.next_page_number }}"
+       {% if hx_target %}hx-get="?{% for key,value in request.GET.items %}{% if key != param %}{{ key }}={{ value|urlencode }}&{% endif %}{% endfor %}{{ param }}={{ page_obj.next_page_number }}" hx-target="{{ hx_target }}" hx-swap="{{ hx_swap|default:'innerHTML' }}"{% endif %}>Next</a>
+  </li>
+  {% endif %}
+</ul>
+{% endwith %}
+{% endif %}

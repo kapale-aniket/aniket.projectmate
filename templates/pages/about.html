@@ -1,0 +1,24 @@
+{% extends "base/base.html" %}
+{% block title %}About — {{ site_settings.site_name|default:"Aniket.ProjectMate" }}{% endblock %}
+{% block content %}
+<section class="pm-section">
+  <div class="container" style="max-width:800px">
+    <div class="glass-card p-4 p-md-5 no-hover">
+      <span class="section-eyebrow">About</span>
+      {% if site_settings.mentor_photo %}
+      <div class="mb-4">
+        <img src="{{ site_settings.mentor_photo.url }}"
+             alt="{{ site_settings.mentor_name|default:'Mentor' }}"
+             class="rounded-4 shadow-sm"
+             style="width:120px;height:120px;object-fit:cover">
+      </div>
+      {% endif %}
+      <h1 class="section-title">{{ site_settings.mentor_name|default:"Aniket" }}</h1>
+      <p class="text-muted">{{ site_settings.mentor_title|default:"Founder & Mentor" }}</p>
+      <div class="mb-4">{{ site_settings.about_mentor|default:"Aniket.ProjectMate helps students learn through live classes, consistency rewards, and a trusted community."|linebreaks }}</div>
+      <h2 class="h5">Why learn with us</h2>
+      <div>{{ site_settings.why_learn_with_us|default:"Practical sessions, transparent communication, and rewards that celebrate showing up."|linebreaks }}</div>
+    </div>
+  </div>
+</section>
+{% endblock %}

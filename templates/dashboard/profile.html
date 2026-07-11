@@ -1,0 +1,174 @@
+{% extends "base/base.html" %}
+{% block title %}Profile — Dashboard{% endblock %}
+{% block content %}
+<section class="pm-section">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-3">{% include "dashboard/sidebar.html" %}</div>
+      <div class="col-lg-9" id="dash-content">
+
+        <div class="profile-hero glass-card no-hover mb-4">
+          <div class="profile-hero__glow" aria-hidden="true"></div>
+          <div class="profile-hero__body">
+            <div class="profile-avatar">
+              {% if object.profile_picture %}
+              <img src="{{ object.profile_picture.url }}" alt="{{ user.get_full_name|default:'Profile' }}">
+              {% else %}
+              <span class="profile-avatar__initials">
+                {{ user.first_name|default:user.email|slice:":1"|upper }}{{ user.last_name|default:""|slice:":1"|upper }}
+              </span>
+              {% endif %}
+            </div>
+            <div class="profile-hero__meta flex-grow-1">
+              <h1 class="h3 display-font mb-1">{{ user.get_full_name|default:"Your profile" }}</h1>
+              <p class="profile-hero__email mb-2">
+                <i class="fas fa-envelope me-1" aria-hidden="true"></i>{{ user.email }}
+              </p>
+              <div class="d-flex flex-wrap gap-2 align-items-center">
+                <span class="pm-badge"><i class="fas fa-star me-1"></i> Level {{ object.level }}</span>
+                <span class="pm-badge warning"><i class="fas fa-coins me-1"></i> {{ object.reward_points }} pts</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="profile-form" novalidate>
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <div class="glass-card no-hover p-4 mb-3 profile-section">
+            <div class="profile-section__head">
+              <span class="profile-section__icon"><i class="fas fa-user"></i></span>
+              <div>
+                <h2 class="h5 mb-0">Your details</h2>
+                <p class="small text-muted mb-0">Keep your name and contact up to date</p>
+              </div>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.first_name.id_for_label }}">First name</label>
+                {{ form.first_name }}
+                {% for e in form.first_name.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.last_name.id_for_label }}">Last name</label>
+                {{ form.last_name }}
+                {% for e in form.last_name.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="profile-email">Email</label>
+                <input id="profile-email"
+                       type="email"
+                       class="form-control"
+                       value="{{ user.email }}"
+                       readonly
+                       disabled
+                       autocomplete="email">
+                <div class="form-text">Used for login — contact support if you need to change it.</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.phone.id_for_label }}">Phone</label>
+                {{ form.phone }}
+                {% for e in form.phone.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label" for="{{ form.profile_picture.id_for_label }}">Profile picture</label>
+                {{ form.profile_picture }}
+                {% if object.profile_picture %}
+                <div class="form-text">Current: <a href="{{ object.profile_picture.url }}" target="_blank" rel="noopener">View image</a></div>
+                {% endif %}
+                {% for e in form.profile_picture.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-actions glass-card no-hover p-3 mb-3 d-flex flex-wrap gap-2 align-items-center justify-content-between">
+            <p class="small text-muted mb-0">Signed in as <strong>{{ user.email }}</strong></p>
+            <button type="submit" class="btn btn-pm px-4">
+              <i class="fas fa-check me-1"></i> Save profile
+            </button>
+          </div>
+        </form>
+
+        <div class="glass-card no-hover p-4 profile-section">
+          <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-start gap-3">
+              <span class="profile-section__icon"><i class="fas fa-shield-halved"></i></span>
+              <div>
+                <h2 class="h5 mb-1">Password &amp; security</h2>
+                <p class="small text-muted mb-0">You’ll stay signed in after changing your password.</p>
+              </div>
+            </div>
+            <button type="button" class="btn btn-pm-outline btn-sm" data-bs-toggle="modal" data-bs-target="#pmPasswordModal">
+              <i class="fas fa-key me-1"></i> Change password
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="modal fade" id="pmPasswordModal" tabindex="-1" aria-labelledby="pmPasswordModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h2 class="modal-title h5 display-font" id="pmPasswordModalLabel">Change password</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form method="post" action="{% url 'dashboard:password_change' %}" novalidate hx-boost="false">
+        {% csrf_token %}
+        <div class="modal-body pt-3">
+          <p class="small text-muted mb-3">You’ll stay logged in after updating. We’ll email you a confirmation.</p>
+          {% if password_form.non_field_errors %}
+          <div class="alert alert-danger py-2 small">{{ password_form.non_field_errors }}</div>
+          {% endif %}
+          <div class="mb-3">
+            <label class="form-label" for="{{ password_form.old_password.id_for_label }}">{{ password_form.old_password.label }}</label>
+            {{ password_form.old_password }}
+            {% for e in password_form.old_password.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="{{ password_form.new_password1.id_for_label }}">{{ password_form.new_password1.label }}</label>
+            {{ password_form.new_password1 }}
+            {% if password_form.new_password1.help_text %}<div class="form-text small">{{ password_form.new_password1.help_text|safe }}</div>{% endif %}
+            {% for e in password_form.new_password1.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+          <div class="mb-1">
+            <label class="form-label" for="{{ password_form.new_password2.id_for_label }}">{{ password_form.new_password2.label }}</label>
+            {{ password_form.new_password2 }}
+            {% for e in password_form.new_password2.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-pm"><i class="fas fa-key me-1"></i> Update password</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% if open_password_modal %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var el = document.getElementById("pmPasswordModal");
+    if (!el) return;
+    document.body.appendChild(el);
+    if (window.bootstrap) {
+      bootstrap.Modal.getOrCreateInstance(el).show();
+    }
+  });
+</script>
+{% else %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    var el = document.getElementById("pmPasswordModal");
+    if (el) document.body.appendChild(el);
+  });
+</script>
+{% endif %}
+{% endblock %}

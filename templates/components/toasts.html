@@ -1,0 +1,28 @@
+{# Bootstrap toast stack — include once in base layouts #}
+<div class="toast-container position-fixed top-0 end-0 p-3 pm-toast-container" id="pmToastContainer" aria-live="polite" aria-atomic="true">
+  {% if messages %}
+  {% for message in messages %}
+  {% with tag=message.tags|default:'info' %}
+  <div class="toast pm-toast pm-toast-{{ tag }} align-items-center border-0 show"
+       role="alert"
+       aria-live="assertive"
+       aria-atomic="true"
+       data-bs-autohide="true"
+       data-bs-delay="{% if 'error' in tag or 'danger' in tag %}7000{% else %}4500{% endif %}">
+    <div class="d-flex">
+      <div class="toast-body">
+        <span class="pm-toast-icon">
+          {% if 'success' in tag %}<i class="fas fa-circle-check"></i>
+          {% elif 'error' in tag or 'danger' in tag %}<i class="fas fa-circle-xmark"></i>
+          {% elif 'warning' in tag %}<i class="fas fa-triangle-exclamation"></i>
+          {% else %}<i class="fas fa-circle-info"></i>{% endif %}
+        </span>
+        <span class="pm-toast-text">{{ message }}</span>
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+  </div>
+  {% endwith %}
+  {% endfor %}
+  {% endif %}
+</div>

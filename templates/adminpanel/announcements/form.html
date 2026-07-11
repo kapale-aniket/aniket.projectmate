@@ -1,0 +1,7 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Announcement{% endblock %}
+{% block content %}
+<div class="ap-card" style="max-width:800px"><form method="post" enctype="multipart/form-data">{% csrf_token %}
+{% for field in form %}<div class="mb-3"><label class="form-label">{{ field.label }}</label>{{ field }}</div>{% endfor %}
+<button class="btn btn-ap" type="submit">Save & publish</button></form></div>
+{% endblock %}

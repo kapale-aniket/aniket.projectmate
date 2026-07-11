@@ -1,0 +1,39 @@
+{% extends "base/base.html" %}
+{% block title %}Paid Courses — Aniket.ProjectMate{% endblock %}
+{% block content %}
+<section class="pm-section">
+  <div class="container">
+    <h1 class="section-title">Paid Classes</h1>
+    <p class="section-lead">Structured courses in Python, Django, SQL, Java, C/C++, HTML, CSS & JavaScript.</p>
+    <div class="d-flex flex-wrap gap-2 mb-4">
+      <a href="?" class="pm-badge">All</a>
+      {% for val,label in technologies %}
+      <a href="?technology={{ val }}" class="pm-badge">{{ label }}</a>
+      {% endfor %}
+    </div>
+    <div class="row g-4">
+      {% for course in courses %}
+      <div class="col-md-6 col-lg-4">
+        <article class="glass-card h-100 overflow-hidden">
+          <div class="pm-card-img d-flex align-items-center justify-content-center text-white fs-1">
+            {% if course.image %}<img src="{{ course.image.url }}" class="pm-card-img" alt="">{% else %}<i class="fas fa-graduation-cap"></i>{% endif %}
+          </div>
+          <div class="p-4">
+            <span class="pm-badge warning">{{ course.get_technology_display }}</span>
+            <h2 class="h5 mt-2">{{ course.title }}</h2>
+            <p class="small text-muted">{{ course.short_description }}</p>
+            <div class="d-flex justify-content-between align-items-center">
+              <strong>₹{{ course.effective_price }}</strong>
+              <a href="{{ course.get_absolute_url }}" class="btn btn-pm btn-sm">View</a>
+            </div>
+          </div>
+        </article>
+      </div>
+      {% empty %}<p class="text-muted">No courses published yet.</p>{% endfor %}
+    </div>
+    {% if is_paginated %}
+    <nav class="mt-4">{% include "components/pagination.html" %}</nav>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}

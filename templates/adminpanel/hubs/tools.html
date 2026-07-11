@@ -1,0 +1,14 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Tools{% endblock %}
+{% block content %}
+<div class="ap-card mb-3">
+  <p class="mb-2 text-muted small">Tools opens from the top bar. This page is a fallback after saving.</p>
+  <button type="button" class="btn btn-ap btn-sm"
+          hx-get="{% url 'adminpanel:tools' %}?tab={{ tab|default:'emails' }}"
+          hx-target="#apToolsModalBody"
+          hx-swap="innerHTML">
+    <i class="fas fa-wrench me-1"></i> Open Tools modal
+  </button>
+</div>
+{% include "adminpanel/hubs/tools_content.html" %}
+{% endblock %}

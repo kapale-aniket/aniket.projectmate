@@ -1,0 +1,11 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Confirm delete{% endblock %}
+{% block content %}
+<div class="ap-card" style="max-width:480px">
+  <p>Delete <strong>{{ object }}</strong>? This cannot be undone.</p>
+  <form method="post">{% csrf_token %}
+    <button class="btn btn-danger" type="submit">Yes, delete</button>
+    <a class="btn btn-outline-secondary" href="javascript:history.back()">Cancel</a>
+  </form>
+</div>
+{% endblock %}

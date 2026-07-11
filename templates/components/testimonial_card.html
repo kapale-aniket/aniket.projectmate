@@ -1,0 +1,35 @@
+{# Expects `t` = Feedback instance with student (+ student.profile when available) #}
+<article class="testimonial-card glass-card p-4 h-100 hover-glow">
+  <div class="testimonial-card__head">
+    <div class="testimonial-avatar" aria-hidden="true">
+      {% if t.student.profile.profile_picture %}
+      <img src="{{ t.student.profile.profile_picture.url }}" alt="">
+      {% else %}
+      <span class="testimonial-avatar__fallback">
+        {{ t.student.first_name|default:t.student.email|slice:":1"|upper }}{{ t.student.last_name|default:""|slice:":1"|upper }}
+      </span>
+      {% endif %}
+    </div>
+    <div class="testimonial-card__who">
+      <p class="testimonial-says mb-0">
+        <strong>{{ t.student.get_full_name|default:t.student.first_name|default:"Student"|truncatechars:24 }}</strong> says
+      </p>
+    </div>
+  </div>
+  <div class="testimonial-stars mb-3" aria-label="{{ t.rating }} out of 5 stars">
+    {% for i in "12345" %}
+      {% if forloop.counter <= t.rating %}
+      <i class="fas fa-star" aria-hidden="true"></i>
+      {% else %}
+      <i class="far fa-star" aria-hidden="true"></i>
+      {% endif %}
+    {% endfor %}
+    <span class="testimonial-rating-num">{{ t.rating }}.0</span>
+  </div>
+  <p class="testimonial-text mb-0">“{{ t.review|truncatewords:40 }}”</p>
+  {% if t.free_class %}
+  <p class="small text-muted mt-3 mb-0">About {{ t.free_class.title }}</p>
+  {% elif t.course %}
+  <p class="small text-muted mt-3 mb-0">About {{ t.course.title }}</p>
+  {% endif %}
+</article>

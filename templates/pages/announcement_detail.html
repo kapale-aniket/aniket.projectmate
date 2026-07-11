@@ -1,0 +1,19 @@
+{% extends "base/base.html" %}
+{% block title %}{{ announcement.title }}{% endblock %}
+{% block content %}
+<section class="pm-section">
+  <div class="container" style="max-width:760px">
+    <article class="glass-card p-4 p-md-5 no-hover">
+      <span class="pm-badge">{{ announcement.get_category_display }}</span>
+      <h1 class="display-font h2 mt-2">{{ announcement.title }}</h1>
+      <p class="small text-muted">{{ announcement.published_at|date:"M d, Y"|default:announcement.created_at|date:"M d, Y" }} · {{ announcement.views }} views</p>
+      <div class="mt-4">{{ announcement.content|linebreaks }}</div>
+      {% if announcement.attachments.all %}
+      <hr>
+      <h2 class="h6">Attachments</h2>
+      <ul>{% for att in announcement.attachments.all %}<li><a href="{{ att.file.url }}">{{ att.name|default:att.file.name }}</a></li>{% endfor %}</ul>
+      {% endif %}
+    </article>
+  </div>
+</section>
+{% endblock %}

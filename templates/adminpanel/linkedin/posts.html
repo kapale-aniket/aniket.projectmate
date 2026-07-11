@@ -1,0 +1,77 @@
+{% extends "adminpanel/base.html" %}
+{% load static %}
+{% block page_title %}Posts parsing{% endblock %}
+{% block extra_css %}<link href="{% static 'css/linkedin-admin.css' %}" rel="stylesheet">{% endblock %}
+{% block content %}
+{% include "adminpanel/linkedin/_nav.html" %}
+{% csrf_token %}
+<div class="row g-3 li-scraper-page" data-task-type="posts">
+  <div class="col-lg-5">
+    <div class="ap-card">
+      <div class="d-flex justify-content-between align-items-start mb-3">
+        <div>
+          <h2 class="h6 mb-1">Posts scraper</h2>
+          <p class="small text-muted mb-0">Scan feed for hiring posts</p>
+        </div>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="liSettingsToggle"><i class="fas fa-gear"></i></button>
+      </div>
+      <div id="liRunPanel">
+        {% if other_task_busy %}
+        <div class="alert alert-warning py-2 small">{{ busy_task.task_type_label }} is active. <a href="{{ busy_task.task_url }}">Go there</a></div>
+        {% endif %}
+        <form id="liScraperForm" data-task-type="posts">
+          <div class="row g-2 mb-3">
+            <div class="col-6"><label class="form-label">Max scroll rounds</label>{{ form.max_scroll_rounds }}</div>
+            <div class="col-6"><label class="form-label">Max posts (0=all)</label>{{ form.max_posts_per_run }}</div>
+          </div>
+          <div class="li-action-grid">
+            <button type="button" class="btn btn-ap" id="liStartTask" {% if other_task_busy %}disabled{% endif %}><i class="fas fa-play"></i><span>Start</span></button>
+            <button type="button" class="btn btn-outline-danger" id="liStopTask"><i class="fas fa-stop"></i><span>Stop</span></button>
+            <button type="button" class="btn btn-outline-warning" id="liPauseTask"><i class="fas fa-pause"></i><span>Pause</span></button>
+            <button type="button" class="btn btn-outline-success" id="liResumeTask"><i class="fas fa-rotate-right"></i><span>Resume</span></button>
+            <button type="button" class="btn btn-outline-primary" id="liShowScraping"><i class="fas fa-display"></i><span>Show</span></button>
+          </div>
+        </form>
+      </div>
+      <div id="liSettingsPanel" class="d-none">
+        <form id="liSettingsForm" data-settings-tab="posts">
+          {{ settings_form.posts_excel_format }}
+          <div class="row g-2 mb-3">
+            <div class="col-6"><label class="form-label">Default scroll rounds</label>{{ settings_form.posts_max_scroll }}</div>
+            <div class="col-6"><label class="form-label">Default max posts</label>{{ settings_form.posts_max_posts }}</div>
+          </div>
+          {% include "adminpanel/linkedin/_excel_format_editor.html" with scraper_type="posts" scraper_label="Posts scraper" %}
+          <button type="button" class="btn btn-ap mt-3" id="liSaveSettings"><i class="fas fa-save me-1"></i> Save settings</button>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="ap-card mb-3">
+      <div class="d-flex justify-content-between mb-2"><h2 class="h6 mb-0">Live progress</h2><span class="badge text-bg-secondary" id="liStatusBadge">Idle</span></div>
+      <div class="row g-2 small mb-2">
+        <div class="col-4"><div class="text-muted">Checked</div><div class="fw-semibold text-primary" id="liFound">0</div></div>
+        <div class="col-4"><div class="text-muted">Page</div><div class="fw-semibold" id="liPage">—</div></div>
+        <div class="col-4"><div class="text-muted">Elapsed</div><div class="fw-semibold" id="liElapsed">00:00:00</div></div>
+      </div>
+      <div class="progress mb-2" style="height:8px"><div class="progress-bar" id="liProgressBar" style="width:0%"></div></div>
+      <div class="small" id="liTaskMeta">Ready</div>
+      <span class="d-none" id="liKeyword"></span><span class="d-none" id="liLocation"></span>
+    </div>
+    <div class="ap-card mb-3 d-none" id="liBrowserPreview">
+      <div class="d-flex justify-content-between mb-2"><h2 class="h6 mb-0">Live preview</h2>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="liHideScraping"><i class="fas fa-xmark"></i></button></div>
+      <div class="li-preview-frame">
+        <img id="liPreviewImg" alt="Browser preview" class="d-none">
+        <div id="liPreviewPlaceholder" class="text-muted small text-center py-5">Waiting for frames…</div>
+      </div>
+    </div>
+    <div class="ap-card"><h2 class="h6 mb-2">System logs</h2><pre class="li-log" id="liLiveLog">Waiting…</pre></div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/excel-format-editor.js' %}"></script>
+<script src="{% static 'js/linkedin-admin.js' %}"></script>
+<script>PMLinkedIn.init({ taskType: "posts", apiBase: "{% url 'linkedin:home' %}", features: { preview: true, settings: true } });</script>
+{% endblock %}

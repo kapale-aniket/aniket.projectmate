@@ -1,0 +1,146 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Site & About settings{% endblock %}
+{% block content %}
+<p class="text-muted mb-3">
+  Edit the public <strong>About</strong> page and site content. Changes show on
+  <a href="{% url 'core:about' %}" target="_blank" rel="noopener">/about/</a> and the homepage.
+</p>
+
+<form method="post" enctype="multipart/form-data" class="row g-3">
+  {% csrf_token %}
+
+  <div class="col-lg-7">
+    <div class="ap-card mb-3">
+      <h2 class="h6 mb-3"><i class="fas fa-user-tie me-1"></i> About page</h2>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.mentor_name.id_for_label }}">{{ form.mentor_name.label }}</label>
+        {{ form.mentor_name }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.mentor_title.id_for_label }}">{{ form.mentor_title.label }}</label>
+        {{ form.mentor_title }}
+        {% if form.mentor_title.help_text %}<div class="form-text">{{ form.mentor_title.help_text }}</div>{% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.mentor_photo.id_for_label }}">Mentor photo</label>
+        {{ form.mentor_photo }}
+        {% if form.instance.mentor_photo %}
+        <div class="form-text">Current: <a href="{{ form.instance.mentor_photo.url }}" target="_blank" rel="noopener">View</a></div>
+        {% endif %}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.about_mentor.id_for_label }}">{{ form.about_mentor.label }}</label>
+        {{ form.about_mentor }}
+        {% if form.about_mentor.help_text %}<div class="form-text">{{ form.about_mentor.help_text }}</div>{% endif %}
+      </div>
+      <div class="mb-0">
+        <label class="form-label" for="{{ form.why_learn_with_us.id_for_label }}">{{ form.why_learn_with_us.label }}</label>
+        {{ form.why_learn_with_us }}
+        {% if form.why_learn_with_us.help_text %}<div class="form-text">{{ form.why_learn_with_us.help_text }}</div>{% endif %}
+      </div>
+    </div>
+
+    <div class="ap-card mb-3">
+      <h2 class="h6 mb-3"><i class="fas fa-palette me-1"></i> Brand</h2>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.site_name.id_for_label }}">Site name</label>
+        {{ form.site_name }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.tagline.id_for_label }}">Tagline</label>
+        {{ form.tagline }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.logo.id_for_label }}">Logo</label>
+        {{ form.logo }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.primary_color.id_for_label }}">Primary color</label>
+        {{ form.primary_color }}
+      </div>
+      <div class="mb-0">
+        <label class="form-label" for="{{ form.footer_text.id_for_label }}">Footer text</label>
+        {{ form.footer_text }}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="ap-card mb-3">
+      <h2 class="h6 mb-3"><i class="fas fa-address-book me-1"></i> Contact & social</h2>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.contact_email.id_for_label }}">Contact email</label>
+        {{ form.contact_email }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.contact_phone.id_for_label }}">Contact phone</label>
+        {{ form.contact_phone }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.contact_address.id_for_label }}">Address</label>
+        {{ form.contact_address }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.instagram_url.id_for_label }}">Instagram</label>
+        {{ form.instagram_url }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.whatsapp_url.id_for_label }}">WhatsApp</label>
+        {{ form.whatsapp_url }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.youtube_url.id_for_label }}">YouTube</label>
+        {{ form.youtube_url }}
+      </div>
+      <div class="mb-3">
+        <label class="form-label" for="{{ form.linkedin_url.id_for_label }}">LinkedIn</label>
+        {{ form.linkedin_url }}
+      </div>
+      <div class="ap-social-toggles">
+        <p class="small text-muted mb-2">Floating social icons on the public site (shown when URL is set)</p>
+        <div class="form-check form-switch mb-2">
+          {{ form.show_whatsapp_icon }}
+          <label class="form-check-label" for="{{ form.show_whatsapp_icon.id_for_label }}">
+            <i class="fab fa-whatsapp text-success me-1"></i> Show WhatsApp
+          </label>
+        </div>
+        <div class="form-check form-switch mb-2">
+          {{ form.show_instagram_icon }}
+          <label class="form-check-label" for="{{ form.show_instagram_icon.id_for_label }}">
+            <i class="fab fa-instagram me-1" style="color:#e1306c"></i> Show Instagram
+          </label>
+        </div>
+        <div class="form-check form-switch mb-2">
+          {{ form.show_linkedin_icon }}
+          <label class="form-check-label" for="{{ form.show_linkedin_icon.id_for_label }}">
+            <i class="fab fa-linkedin-in me-1" style="color:#0a66c2"></i> Show LinkedIn
+          </label>
+        </div>
+        <div class="form-check form-switch mb-0">
+          {{ form.show_youtube_icon }}
+          <label class="form-check-label" for="{{ form.show_youtube_icon.id_for_label }}">
+            <i class="fab fa-youtube me-1" style="color:#ff0000"></i> Show YouTube
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="ap-card mb-3">
+      <h2 class="h6 mb-3"><i class="fas fa-shield-halved me-1"></i> Login</h2>
+      <div class="mb-0">
+        <label class="form-label" for="{{ form.login_trust_message.id_for_label }}">Login trust message</label>
+        {{ form.login_trust_message }}
+      </div>
+    </div>
+
+    <div class="ap-card">
+      <button type="submit" class="btn btn-ap w-100">
+        <i class="fas fa-save me-1"></i> Save settings
+      </button>
+      <a href="{% url 'core:about' %}" class="btn btn-outline-secondary w-100 mt-2" target="_blank" rel="noopener">
+        <i class="fas fa-external-link-alt me-1"></i> Preview About page
+      </a>
+    </div>
+  </div>
+</form>
+{% endblock %}

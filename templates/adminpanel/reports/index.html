@@ -1,0 +1,262 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Reports & analytics{% endblock %}
+{% block content %}
+<p class="text-muted small mb-3">Hover a chart segment for details. Click to open the matching filtered page.</p>
+
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <a class="ap-card ap-stat-link d-block text-decoration-none" href="{{ classes_today_url }}" data-bs-toggle="tooltip" title="View classes with today's registrations">
+      <div class="small text-muted">Today registrations</div>
+      <div class="h4 mb-0 text-dark">{{ today_regs_count }}</div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a class="ap-card ap-stat-link d-block text-decoration-none" href="{{ classes_month_url }}" data-bs-toggle="tooltip" title="View classes with this month's registrations">
+      <div class="small text-muted">This month regs</div>
+      <div class="h4 mb-0 text-dark">{{ month_regs_count }}</div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a class="ap-card ap-stat-link d-block text-decoration-none" href="{{ courses_url }}" data-bs-toggle="tooltip" title="Open paid courses">
+      <div class="small text-muted">Revenue</div>
+      <div class="h4 mb-0 text-dark">₹{{ revenue|floatformat:0 }}</div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="ap-card">
+      <div class="small text-muted">Active / Inactive</div>
+      <div class="h4 mb-0">
+        <a href="{{ students_active_url }}" class="text-decoration-none" data-bs-toggle="tooltip" title="Active students">{{ active_users }}</a>
+        <span class="text-muted">/</span>
+        <a href="{{ students_inactive_url }}" class="text-decoration-none text-secondary" data-bs-toggle="tooltip" title="Inactive students">{{ inactive_users }}</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="ap-card ap-chart-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 mb-0">Daily registrations (14 days)</h2>
+        <span class="badge text-bg-light border">Click bar → Classes</span>
+      </div>
+      <canvas id="chartDaily" height="160"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="ap-card ap-chart-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 mb-0">Monthly registrations</h2>
+        <span class="badge text-bg-light border">Click bar → Classes</span>
+      </div>
+      <canvas id="chartMonthly" height="160"></canvas>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="ap-card ap-chart-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 mb-0">Attendance</h2>
+        <span class="badge text-bg-light border">→ Attendance</span>
+      </div>
+      <p class="small text-muted mb-2">Avg {{ avg_attendance|floatformat:1 }}%</p>
+      <canvas id="chartAttendance" height="180"></canvas>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="ap-card ap-chart-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 mb-0">Referrals</h2>
+        <span class="badge text-bg-light border">→ Community</span>
+      </div>
+      <canvas id="chartReferrals" height="200"></canvas>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="ap-card ap-chart-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 mb-0">Email delivery</h2>
+        <span class="badge text-bg-light border">→ Top bar Tools</span>
+      </div>
+      <canvas id="chartEmails" height="200"></canvas>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="ap-card ap-chart-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 mb-0">Most popular courses</h2>
+        <span class="badge text-bg-light border">Click → Course</span>
+      </div>
+      <canvas id="chartCourses" height="200"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="ap-card ap-chart-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 mb-0">Most popular free classes</h2>
+        <span class="badge text-bg-light border">Click → Class</span>
+      </div>
+      <canvas id="chartClasses" height="200"></canvas>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="ap-card ap-chart-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 mb-0">Active vs inactive</h2>
+        <span class="badge text-bg-light border">→ Students</span>
+      </div>
+      <canvas id="chartUsers" height="200"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="ap-card">
+      <h2 class="h6">Student activity</h2>
+      {% for a in recent_activity %}
+      <div class="small border-bottom py-1">
+        <strong>{% if a.user %}{{ a.user.email }}{% else %}System{% endif %}</strong>
+        — {{ a.action }}
+        <span class="text-muted">{{ a.created_at|date:"M d H:i" }}</span>
+        {% if a.description %}<div class="text-muted">{{ a.description|truncatechars:120 }}</div>{% endif %}
+      </div>
+      {% empty %}<p class="text-muted mb-0">No activity logged.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  const charts = {{ charts_json|safe }};
+  const palette = ['#1a365d', '#2c5282', '#c4a35a', '#c53030', '#4a6fa5', '#7a95b8', '#64748b', '#0f2744'];
+
+  function tipLabel(dataset, tooltips) {
+    return {
+      callbacks: {
+        label: function (ctx) {
+          return tooltips[ctx.dataIndex] || (ctx.label + ': ' + ctx.raw);
+        }
+      }
+    };
+  }
+
+  function onClickNavigate(urls) {
+    return function (evt, elements) {
+      if (!elements.length) return;
+      const idx = elements[0].index;
+      const url = urls[idx];
+      if (url) window.location.href = url;
+    };
+  }
+
+  function barChart(id, data, color) {
+    const el = document.getElementById(id);
+    if (!el || !data.labels.length) {
+      if (el) el.parentElement.insertAdjacentHTML('beforeend', '<p class="text-muted small mb-0 mt-2">No data yet.</p>');
+      return;
+    }
+    el.style.cursor = 'pointer';
+    new Chart(el, {
+      type: 'bar',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label: 'Count',
+          data: data.values,
+          backgroundColor: color || '#1a365d88',
+          borderColor: color || '#1a365d',
+          borderWidth: 1,
+          borderRadius: 6,
+          hoverBackgroundColor: '#0f2744'
+        }]
+      },
+      options: {
+        responsive: true,
+        onClick: onClickNavigate(data.urls),
+        plugins: {
+          legend: { display: false },
+          tooltip: tipLabel(null, data.tooltips)
+        },
+        scales: {
+          y: { beginAtZero: true, ticks: { precision: 0 } },
+          x: { ticks: { maxRotation: 45, minRotation: 0 } }
+        }
+      }
+    });
+  }
+
+  function doughnutChart(id, data) {
+    const el = document.getElementById(id);
+    if (!el || !data.labels.length) {
+      if (el) el.parentElement.insertAdjacentHTML('beforeend', '<p class="text-muted small mb-0 mt-2">No data yet.</p>');
+      return;
+    }
+    el.style.cursor = 'pointer';
+    new Chart(el, {
+      type: 'doughnut',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          data: data.values,
+          backgroundColor: data.labels.map((_, i) => palette[i % palette.length]),
+          borderWidth: 2,
+          borderColor: '#fff',
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        onClick: onClickNavigate(data.urls),
+        plugins: {
+          legend: { position: 'bottom' },
+          tooltip: tipLabel(null, data.tooltips)
+        }
+      }
+    });
+  }
+
+  function hBarChart(id, data) {
+    const el = document.getElementById(id);
+    if (!el || !data.labels.length) {
+      if (el) el.parentElement.insertAdjacentHTML('beforeend', '<p class="text-muted small mb-0 mt-2">No data yet.</p>');
+      return;
+    }
+    el.style.cursor = 'pointer';
+    new Chart(el, {
+      type: 'bar',
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label: 'Count',
+          data: data.values,
+          backgroundColor: data.labels.map((_, i) => palette[i % palette.length] + 'cc'),
+          borderRadius: 6
+        }]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        onClick: onClickNavigate(data.urls),
+        plugins: {
+          legend: { display: false },
+          tooltip: tipLabel(null, data.tooltips)
+        },
+        scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }
+      }
+    });
+  }
+
+  barChart('chartDaily', charts.daily, '#1a365d');
+  barChart('chartMonthly', charts.monthly, '#0284c7');
+  doughnutChart('chartAttendance', charts.attendance);
+  doughnutChart('chartReferrals', charts.referrals);
+  doughnutChart('chartEmails', charts.emails);
+  hBarChart('chartCourses', charts.courses);
+  hBarChart('chartClasses', charts.classes);
+  doughnutChart('chartUsers', charts.users);
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Latest classes{% endblock %}
+{% block content %}
+<div class="mb-4">
+  <h2 class="h5 mb-1">Latest classes</h2>
+  <p class="small text-muted mb-0">
+    Upcoming / published only — cancelled and archived are hidden.
+    Next class day; if several share that day, all appear as cards.
+  </p>
+</div>
+
+<div class="row g-4 align-items-stretch">
+  {# —— Free —— #}
+  <div class="col-lg-6 d-flex flex-column">
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+      <h3 class="h6 mb-0"><i class="fas fa-chalkboard me-2 text-teal"></i>Free classes</h3>
+      {% if latest_free_date %}
+      <span class="small text-muted">{{ latest_free_date|date:"M d, Y" }}</span>
+      {% endif %}
+    </div>
+    <div class="row g-3 flex-grow-1">
+      {% for c in latest_free %}
+      <div class="col-12">
+        <article class="ap-card ap-latest-card h-100">
+          <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <div>
+              <div class="fw-semibold">{{ c.title }}</div>
+              <div class="small text-muted">{{ c.technology }}</div>
+            </div>
+            {% if c.status == 'live' %}
+            <span class="badge text-bg-danger">Live</span>
+            {% elif c.status == 'completed' %}
+            <span class="badge text-bg-success">Completed</span>
+            {% elif c.status == 'cancelled' %}
+            <span class="badge text-bg-warning">Cancelled</span>
+            {% else %}
+            <span class="badge text-bg-primary">{{ c.get_status_display }}</span>
+            {% endif %}
+          </div>
+          <p class="small text-muted mb-3">
+            <i class="far fa-calendar me-1"></i>{{ c.date|date:"M d, Y" }}
+            · {{ c.start_time|time:"g:i A" }}
+          </p>
+          <div class="ap-latest-card__actions">
+            <form method="post" action="{% url 'adminpanel:free_class_mail' c.pk 'live' %}">{% csrf_token %}
+              <button class="btn btn-outline-danger btn-sm" type="submit" data-bs-toggle="tooltip" title="Send live mail">
+                <i class="fas fa-tower-broadcast me-1"></i> Live
+              </button>
+            </form>
+            <form method="post" action="{% url 'adminpanel:free_class_mail' c.pk 'reminder' %}">{% csrf_token %}
+              <button class="btn btn-outline-primary btn-sm" type="submit" data-bs-toggle="tooltip" title="Send reminder mail">
+                <i class="fas fa-bell me-1"></i> Reminder
+              </button>
+            </form>
+            <form method="post" action="{% url 'adminpanel:free_class_mail' c.pk 'feedback' %}">{% csrf_token %}
+              <button class="btn btn-outline-success btn-sm" type="submit" data-bs-toggle="tooltip" title="Send feedback reminder">
+                <i class="fas fa-comment-dots me-1"></i> Feedback
+              </button>
+            </form>
+          </div>
+        </article>
+      </div>
+      {% empty %}
+      <div class="col-12"><div class="ap-card text-muted small h-100">No free classes yet.</div></div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {# —— Paid —— #}
+  <div class="col-lg-6 d-flex flex-column">
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+      <h3 class="h6 mb-0"><i class="fas fa-graduation-cap me-2"></i>Paid courses</h3>
+      {% if latest_paid_date %}
+      <span class="small text-muted">{{ latest_paid_date|date:"M d, Y" }}</span>
+      {% endif %}
+    </div>
+    <div class="row g-3 flex-grow-1">
+      {% for c in latest_paid %}
+      <div class="col-12">
+        <article class="ap-card ap-latest-card h-100">
+          <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <div>
+              <div class="fw-semibold">{{ c.title }}</div>
+              <div class="small text-muted">{{ c.get_technology_display }} · ₹{{ c.effective_price }}</div>
+            </div>
+            <span class="badge text-bg-secondary">{{ c.get_status_display }}</span>
+          </div>
+          <p class="small text-muted mb-3">
+            <i class="far fa-calendar me-1"></i>
+            {% if c.start_date %}{{ c.start_date|date:"M d, Y" }}{% else %}Start TBA{% endif %}
+          </p>
+          <div class="ap-latest-card__actions">
+            <form method="post" action="{% url 'adminpanel:paid_course_mail' c.pk 'live' %}">{% csrf_token %}
+              <button class="btn btn-outline-danger btn-sm" type="submit" data-bs-toggle="tooltip" title="Send live mail">
+                <i class="fas fa-tower-broadcast me-1"></i> Live
+              </button>
+            </form>
+            <form method="post" action="{% url 'adminpanel:paid_course_mail' c.pk 'reminder' %}">{% csrf_token %}
+              <button class="btn btn-outline-primary btn-sm" type="submit" data-bs-toggle="tooltip" title="Send reminder mail">
+                <i class="fas fa-bell me-1"></i> Reminder
+              </button>
+            </form>
+          </div>
+        </article>
+      </div>
+      {% empty %}
+      <div class="col-12"><div class="ap-card text-muted small h-100">No paid courses yet.</div></div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

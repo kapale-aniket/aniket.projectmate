@@ -1,0 +1,188 @@
+{% extends "base/base.html" %}
+{% block title %}Dashboard — Aniket.ProjectMate{% endblock %}
+{% block content %}
+<section class="pm-section dash-home">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-3">{% include "dashboard/sidebar.html" %}</div>
+      <div class="col-lg-9" id="dash-content">
+
+        <header class="dash-welcome">
+          <div class="dash-welcome__glow" aria-hidden="true"></div>
+          <div class="dash-welcome__body">
+            <div>
+              <p class="dash-welcome__eyebrow">Your learning hub</p>
+              <h1 class="dash-welcome__title display-font">Hey, {{ user.first_name|default:"learner" }}</h1>
+              <p class="dash-welcome__lead">Keep showing up — classes, streaks, and rewards live here.</p>
+            </div>
+            <div class="dash-welcome__stats">
+              <div class="dash-welcome__stat">
+                <span class="dash-welcome__stat-val">{{ profile.level }}</span>
+                <span class="dash-welcome__stat-lbl">Level</span>
+              </div>
+              <div class="dash-welcome__stat dash-welcome__stat--gold">
+                <span class="dash-welcome__stat-val">{{ profile.reward_points }}</span>
+                <span class="dash-welcome__stat-lbl">Points</span>
+              </div>
+            </div>
+          </div>
+          <div class="dash-welcome__actions">
+            <a href="{% url 'classes:list' %}" class="btn btn-pm btn-sm"><i class="fas fa-plus me-1"></i> Browse classes</a>
+            <a href="{% url 'dashboard:rewards' %}#dash-content" class="btn btn-pm-outline btn-sm">View rewards</a>
+            <a href="{% url 'core:project' %}" class="btn btn-pm-outline btn-sm">Project idea</a>
+          </div>
+        </header>
+
+        <div class="dash-metrics">
+          <article class="dash-metric">
+            <span class="dash-metric__icon" aria-hidden="true"><i class="fas fa-bookmark"></i></span>
+            <div>
+              <div class="dash-metric__value">{{ registered_classes|length }}</div>
+              <div class="dash-metric__label">Registered</div>
+            </div>
+          </article>
+          <article class="dash-metric">
+            <span class="dash-metric__icon dash-metric__icon--teal" aria-hidden="true"><i class="fas fa-user-check"></i></span>
+            <div>
+              <div class="dash-metric__value">{{ profile.attendance_percentage }}%</div>
+              <div class="dash-metric__label">Attendance</div>
+            </div>
+            <div class="dash-metric__bar" aria-hidden="true">
+              <span style="width: {{ profile.attendance_percentage }}%"></span>
+            </div>
+          </article>
+          <article class="dash-metric">
+            <span class="dash-metric__icon dash-metric__icon--gold" aria-hidden="true"><i class="fas fa-fire"></i></span>
+            <div>
+              <div class="dash-metric__value">{{ profile.consecutive_attendance }}</div>
+              <div class="dash-metric__label">Day streak</div>
+            </div>
+          </article>
+          <article class="dash-metric">
+            <span class="dash-metric__icon dash-metric__icon--rose" aria-hidden="true"><i class="fas fa-medal"></i></span>
+            <div>
+              <div class="dash-metric__value">{{ achievements|length }}</div>
+              <div class="dash-metric__label">Badges</div>
+            </div>
+          </article>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-md-6">
+            <section class="dash-panel h-100">
+              <div class="dash-panel__head">
+                <h2 class="dash-panel__title">Upcoming classes</h2>
+                <a href="{% url 'dashboard:classes' %}#dash-content" class="dash-panel__link">All</a>
+              </div>
+              <div class="dash-list">
+                {% for c in upcoming_classes %}
+                <a href="{{ c.get_absolute_url }}" class="dash-list__item">
+                  <span class="dash-list__date">
+                    <strong>{{ c.date|date:"d" }}</strong>
+                    <small>{{ c.date|date:"M" }}</small>
+                  </span>
+                  <span class="dash-list__body">
+                    <strong>{{ c.title }}</strong>
+                    <small>{{ c.start_time|time:"g:i A" }}</small>
+                  </span>
+                  <i class="fas fa-chevron-right dash-list__chevron" aria-hidden="true"></i>
+                </a>
+                {% empty %}
+                <p class="dash-empty">No upcoming registered classes. <a href="{% url 'classes:list' %}">Browse free classes</a></p>
+                {% endfor %}
+              </div>
+            </section>
+          </div>
+
+          <div class="col-md-6">
+            <section class="dash-panel h-100">
+              <div class="dash-panel__head">
+                <h2 class="dash-panel__title">Recent rewards</h2>
+                <a href="{% url 'dashboard:rewards' %}#dash-content" class="dash-panel__link">All</a>
+              </div>
+              <div class="dash-list">
+                {% for r in recent_rewards %}
+                <div class="dash-list__item dash-list__item--static">
+                  <span class="dash-list__icon" aria-hidden="true"><i class="fas fa-coins"></i></span>
+                  <span class="dash-list__body">
+                    <strong>{{ r.description|default:r.get_reason_display }}</strong>
+                    <small>{{ r.created_at|timesince }} ago</small>
+                  </span>
+                  <span class="dash-list__points">+{{ r.points }}</span>
+                </div>
+                {% empty %}
+                <p class="dash-empty">Earn points by attending classes and engaging with the community.</p>
+                {% endfor %}
+              </div>
+            </section>
+          </div>
+
+          <div class="col-md-6">
+            <section class="dash-panel h-100">
+              <div class="dash-panel__head">
+                <h2 class="dash-panel__title">Announcements</h2>
+              </div>
+              <div class="dash-list">
+                {% for a in announcements %}
+                <a href="{{ a.get_absolute_url }}" class="dash-list__item">
+                  <span class="dash-list__icon dash-list__icon--soft" aria-hidden="true"><i class="fas fa-bullhorn"></i></span>
+                  <span class="dash-list__body">
+                    <strong>{{ a.title }}</strong>
+                    <small>{{ a.created_at|timesince }} ago</small>
+                  </span>
+                  <i class="fas fa-chevron-right dash-list__chevron" aria-hidden="true"></i>
+                </a>
+                {% empty %}
+                <p class="dash-empty">No announcements yet.</p>
+                {% endfor %}
+              </div>
+            </section>
+          </div>
+
+          <div class="col-md-6">
+            <section class="dash-panel h-100">
+              <div class="dash-panel__head">
+                <h2 class="dash-panel__title">Achievements</h2>
+              </div>
+              {% if achievements %}
+              <div class="dash-badges">
+                {% for sa in achievements %}
+                <span class="dash-badge" title="{{ sa.achievement.description }}">
+                  <i class="fas {{ sa.achievement.icon }}" aria-hidden="true"></i>
+                  {{ sa.achievement.title }}
+                </span>
+                {% endfor %}
+              </div>
+              {% else %}
+              <p class="dash-empty mb-0">Badges unlock as you learn.</p>
+              {% endif %}
+            </section>
+          </div>
+
+          <div class="col-12">
+            <section class="dash-panel">
+              <div class="dash-panel__head">
+                <h2 class="dash-panel__title">Recent activity</h2>
+              </div>
+              {% if activities %}
+              <ul class="dash-activity">
+                {% for act in activities %}
+                <li>
+                  <span class="dash-activity__dot" aria-hidden="true"></span>
+                  <span class="dash-activity__text">{{ act.action }}</span>
+                  <time class="dash-activity__time">{{ act.created_at|timesince }} ago</time>
+                </li>
+                {% endfor %}
+              </ul>
+              {% else %}
+              <p class="dash-empty mb-0">Your activity will show up here.</p>
+              {% endif %}
+            </section>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

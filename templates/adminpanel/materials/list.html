@@ -1,0 +1,28 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Course materials{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between mb-3">
+  <h2 class="h5 mb-0">Course materials</h2>
+  <a class="btn btn-ap" href="{% url 'adminpanel:material_create' %}">Upload material</a>
+</div>
+<div class="ap-card">
+{% for m in materials %}
+<div class="d-flex justify-content-between align-items-start border-bottom py-3 gap-3">
+  <div>
+    <strong>{{ m.title }}</strong>
+    <span class="badge text-bg-light border">{{ m.get_material_type_display }}</span>
+    {% if m.is_public %}<span class="badge text-bg-success">Public</span>
+    {% else %}<span class="badge text-bg-secondary">Restricted</span>{% endif %}
+    <div class="small text-muted mt-1">
+      {% if m.course %}Course: {{ m.course.title }}{% elif m.free_class %}Class: {{ m.free_class.title }}{% else %}No course link{% endif %}
+      · <a href="{{ m.file.url }}" target="_blank">Download</a>
+    </div>
+  </div>
+  <a class="text-danger small" href="{% url 'adminpanel:material_delete' m.pk %}">Delete</a>
+</div>
+{% empty %}
+<p class="text-muted mb-0">No materials uploaded yet.</p>
+{% endfor %}
+</div>
+{% include "components/pagination.html" %}
+{% endblock %}

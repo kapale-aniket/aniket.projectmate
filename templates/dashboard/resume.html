@@ -1,0 +1,31 @@
+{% extends "base/base.html" %}
+{% block title %}Resume Review — Dashboard{% endblock %}
+{% block content %}
+<section class="pm-section"><div class="container"><div class="row g-4">
+  <div class="col-lg-3">{% include "dashboard/sidebar.html" %}</div>
+  <div class="col-lg-9" id="dash-content">
+    <h1 class="h3 display-font mb-3">Resume review</h1>
+    <p class="text-muted">Attend 6 consecutive sessions to unlock a free resume review with Aniket.ProjectMate.</p>
+    <div class="glass-card p-4 mb-4 no-hover">
+      <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="mb-3"><label class="form-label">Upload resume (PDF/DOC)</label>{{ form.file }}</div>
+        <div class="mb-3"><label class="form-label">Notes</label>{{ form.notes }}</div>
+        <button type="submit" class="btn btn-pm">Submit for review</button>
+      </form>
+    </div>
+    {% for u in uploads %}
+    <div class="glass-card p-3 mb-2 no-hover">
+      <div class="d-flex justify-content-between">
+        <strong>{{ u.file.name }}</strong>
+        <span class="pm-badge">{{ u.get_status_display }}</span>
+      </div>
+      {% for rev in u.reviews.all %}
+      <div class="mt-2 small trust-banner mb-0">{{ rev.feedback }}</div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+    {% include "components/pagination.html" %}
+  </div>
+</div></div></section>
+{% endblock %}

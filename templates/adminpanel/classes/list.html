@@ -1,0 +1,156 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Free Classes{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h2 class="h5 mb-0">Free classes</h2>
+  <div class="d-flex flex-wrap gap-2 align-items-center">
+    <form method="get" action="{% url 'adminpanel:classes' %}" class="d-flex flex-wrap gap-2 align-items-center" data-auto-filter>
+      {% if filter_reg_date %}<input type="hidden" name="reg_date" value="{{ filter_reg_date }}">{% endif %}
+      {% if filter_reg_month %}<input type="hidden" name="reg_month" value="{{ filter_reg_month }}">{% endif %}
+      <input class="form-control form-control-sm" style="width:180px" name="q" value="{{ filter_q }}" placeholder="Search..." autocomplete="off">
+      <select class="form-select form-select-sm" style="width:150px" name="status" aria-label="Status">
+        <option value="">All status</option>
+        {% for val,label in status_choices %}
+        <option value="{{ val }}" {% if filter_status == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <a class="btn btn-outline-secondary btn-icon" href="{% url 'adminpanel:classes' %}" data-reset-filter data-bs-toggle="tooltip" title="Reset filters"><i class="fas fa-rotate-left"></i></a>
+    </form>
+    <button type="button" class="btn btn-ap btn-icon btn-icon-lg"
+            data-bs-toggle="tooltip" title="Create class"
+            hx-get="{% url 'adminpanel:class_create' %}"
+            hx-target="#apFormModalBody"
+            hx-swap="innerHTML">
+      <i class="fas fa-plus"></i>
+    </button>
+  </div>
+</div>
+{% if filter_reg_date or filter_reg_month or filter_q or filter_status %}
+<div class="small text-muted mb-2">
+  Filters on
+  {% if filter_reg_date %} · regs {{ filter_reg_date }}{% endif %}
+  {% if filter_reg_month %} · month {{ filter_reg_month }}{% endif %}
+  {% if filter_q %} · “{{ filter_q }}”{% endif %}
+  {% if filter_status %} · {{ filter_status }}{% endif %}
+</div>
+{% endif %}
+<div class="ap-card table-responsive">
+  <table class="table ap-table align-middle mb-0">
+    <thead><tr><th>Title</th><th>Date</th><th>Status</th><th>Seats</th><th>Reg</th><th class="text-end">Actions</th></tr></thead>
+    <tbody>
+      {% for c in classes %}
+      <tr>
+        <td><strong>{{ c.title }}</strong><div class="small text-muted">{{ c.technology }}</div></td>
+        <td>{{ c.date|date:"M d, Y" }} {{ c.start_time|time:"g:i A" }}</td>
+        <td>
+          {% if c.status == 'live' %}
+          <span class="badge text-bg-danger">Live</span>
+          {% elif c.status == 'completed' %}
+          <span class="badge text-bg-success">Completed</span>
+          {% elif c.status == 'cancelled' %}
+          <span class="badge text-bg-warning">Cancelled</span>
+          {% elif c.status == 'draft' %}
+          <span class="badge text-bg-secondary">Draft</span>
+          {% else %}
+          <span class="badge text-bg-primary">Upcoming</span>
+          {% endif %}
+        </td>
+        <td>{{ c.registered_count }}/{{ c.max_seats }}</td>
+        <td>
+          {% if c.registration_enabled %}
+          <span class="badge text-bg-success">On</span>
+          {% else %}
+          <span class="badge text-bg-secondary">Off</span>
+          {% endif %}
+        </td>
+        <td class="text-end">
+          <div class="ap-actions justify-content-end">
+            <button type="button" class="btn btn-outline-primary btn-icon"
+                    data-bs-toggle="tooltip" title="Edit"
+                    hx-get="{% url 'adminpanel:class_edit' c.pk %}"
+                    hx-target="#apFormModalBody"
+                    hx-swap="innerHTML"><i class="fas fa-pen"></i></button>
+
+            {% if c.can_mark_attendance %}
+              {% if c.attendance_count %}
+              <a class="btn btn-success btn-icon" href="{% url 'adminpanel:attendance_mark' c.pk %}"
+                 data-bs-toggle="tooltip" title="Attendance marked — edit">
+                <i class="fas fa-calendar-check"></i>
+              </a>
+              {% else %}
+              <a class="btn btn-outline-primary btn-icon" href="{% url 'adminpanel:attendance_mark' c.pk %}"
+                 data-bs-toggle="tooltip" title="Mark attendance">
+                <i class="fas fa-calendar-check"></i>
+              </a>
+              {% endif %}
+            {% else %}
+              <span class="btn btn-outline-secondary btn-icon disabled" tabindex="-1" aria-disabled="true"
+                    data-bs-toggle="tooltip" title="Available after class ends">
+                <i class="fas fa-calendar-check"></i>
+              </span>
+            {% endif %}
+
+            {% if c.status == 'completed' or c.status == 'cancelled' %}
+            <form method="post" action="{% url 'adminpanel:class_duplicate' c.pk %}">{% csrf_token %}
+              <button class="btn btn-outline-secondary btn-icon" type="submit" data-bs-toggle="tooltip" title="Duplicate as new upcoming class"><i class="fas fa-copy"></i></button>
+            </form>
+            {% endif %}
+
+            {% if c.status == 'cancelled' %}
+            <span class="btn btn-warning btn-icon" data-bs-toggle="tooltip" title="Cancelled">
+              <i class="fas fa-ban"></i>
+            </span>
+            {% elif c.status == 'upcoming' %}
+            <form method="post" action="{% url 'adminpanel:class_cancel' c.pk %}">{% csrf_token %}
+              <button class="btn btn-outline-warning btn-icon" type="submit" data-bs-toggle="tooltip" title="Cancel class"><i class="fas fa-ban"></i></button>
+            </form>
+            {% endif %}
+
+            {% if c.status == 'live' %}
+            <span class="btn btn-danger btn-icon" data-bs-toggle="tooltip" title="Live now">
+              <i class="fas fa-tower-broadcast"></i>
+            </span>
+            {% elif c.can_go_live %}
+            <form method="post" action="{% url 'adminpanel:class_go_live' c.pk %}">{% csrf_token %}
+              <button class="btn btn-outline-danger btn-icon" type="submit"
+                      data-bs-toggle="tooltip"
+                      title="Mark live &amp; email students to join now">
+                <i class="fas fa-tower-broadcast"></i>
+              </button>
+            </form>
+            {% endif %}
+
+            {% if c.status == 'completed' %}
+            <span class="btn btn-success btn-icon" data-bs-toggle="tooltip" title="Completed">
+              <i class="fas fa-check"></i>
+            </span>
+            {% endif %}
+
+            {% if c.status == 'upcoming' %}
+            <form method="post" action="{% url 'adminpanel:class_toggle_reg' c.pk %}">{% csrf_token %}
+              {% if c.registration_enabled %}
+              <button class="btn btn-success btn-icon" type="submit" data-bs-toggle="tooltip" title="Registration On — click to turn Off">
+                <i class="fas fa-toggle-on"></i>
+              </button>
+              {% else %}
+              <button class="btn btn-outline-secondary btn-icon" type="submit" data-bs-toggle="tooltip" title="Registration Off — click to turn On">
+                <i class="fas fa-toggle-off"></i>
+              </button>
+              {% endif %}
+            </form>
+            {% endif %}
+
+            <button type="button" class="btn btn-outline-danger btn-icon"
+                    title="Delete"
+                    data-bs-toggle="modal" data-bs-target="#apConfirmModal"
+                    data-action="{% url 'adminpanel:class_delete' c.pk %}"
+                    data-message="Delete class “{{ c.title }}”?"><i class="fas fa-trash"></i></button>
+          </div>
+        </td>
+      </tr>
+      {% empty %}<tr><td colspan="6">No classes yet.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if is_paginated %}<div class="mt-3">{% include "components/pagination.html" %}</div>{% endif %}
+{% endblock %}

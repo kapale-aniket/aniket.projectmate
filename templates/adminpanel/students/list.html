@@ -1,0 +1,421 @@
+{% extends "adminpanel/base.html" %}
+{% block page_title %}Students{% endblock %}
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between gap-2 mb-3 align-items-start">
+  <form method="get" action="{% url 'adminpanel:students' %}" class="d-flex flex-wrap gap-2 align-items-center" data-auto-filter id="studentsFilterForm">
+    <input class="form-control" style="width:200px" name="q" value="{{ request.GET.q }}" placeholder="Search..." autocomplete="off">
+    <input class="form-control" style="width:160px" name="college" value="{{ request.GET.college }}" placeholder="College" autocomplete="off">
+    <select class="form-select" style="width:140px" name="year" aria-label="Year">
+      <option value="">All years</option>
+      {% for val,label in years %}<option value="{{ val }}" {% if request.GET.year == val %}selected{% endif %}>{{ label }}</option>{% endfor %}
+    </select>
+    <input class="form-control" style="width:140px" name="course" value="{{ request.GET.course }}" placeholder="Course/tech" autocomplete="off">
+    <select class="form-select" style="width:140px" name="active" aria-label="Status">
+      <option value="">All status</option>
+      <option value="1" {% if active_filter == '1' %}selected{% endif %}>Active</option>
+      <option value="0" {% if active_filter == '0' %}selected{% endif %}>Inactive</option>
+    </select>
+    <a class="btn btn-outline-secondary btn-icon" href="{% url 'adminpanel:students' %}" data-reset-filter data-bs-toggle="tooltip" title="Reset filters"><i class="fas fa-rotate-left"></i></a>
+  </form>
+  <div class="ap-actions">
+    <a class="btn btn-outline-secondary btn-icon" href="{% url 'adminpanel:students_export' %}?format=xlsx{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" data-bs-toggle="tooltip" title="Export Excel"><i class="fas fa-file-excel"></i></a>
+    <a class="btn btn-outline-secondary btn-icon" href="{% url 'adminpanel:students_export' %}?format=pdf{% if request.GET.urlencode %}&{{ request.GET.urlencode }}{% endif %}" data-bs-toggle="tooltip" title="Export PDF"><i class="fas fa-file-pdf"></i></a>
+  </div>
+</div>
+
+<div id="studentsSelectionRoot"
+     data-ids-url="{% url 'adminpanel:students_ids' %}{% if filter_query %}?{{ filter_query }}{% endif %}"
+     data-filter-key="{{ filter_query|default:'' }}">
+
+  {# Bulk actions form — separate from row forms (no nesting) #}
+  <form method="post" action="{% url 'adminpanel:students_bulk' %}" id="studentsBulkForm">
+    {% csrf_token %}
+    <div id="studentsBulkBar" class="ap-bulk-bar ap-card mb-3 d-none">
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div class="small fw-semibold">
+          <span id="studentsSelectedCount">0</span> selected
+          <button type="button" class="btn btn-link btn-sm py-0" id="clearStudentSelection">Clear</button>
+        </div>
+        <div class="ap-actions">
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="bulkMailBtn" disabled>
+            <i class="fas fa-envelope me-1"></i> Send mail
+          </button>
+          <button type="submit" name="action" value="activate" class="btn btn-outline-success btn-sm" data-bulk-action disabled>
+            <i class="fas fa-user-check me-1"></i> Activate
+          </button>
+          <button type="submit" name="action" value="deactivate" class="btn btn-outline-warning btn-sm" data-bulk-action disabled>
+            <i class="fas fa-user-slash me-1"></i> Deactivate
+          </button>
+          <button type="button" class="btn btn-outline-danger btn-sm" id="bulkDeleteBtn" disabled>
+            <i class="fas fa-trash me-1"></i> Delete
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="bulkSelectedHidden"></div>
+  </form>
+
+  <div class="ap-card table-responsive">
+    <table class="table ap-table align-middle mb-0">
+      <thead>
+        <tr>
+          <th style="width:42px">
+            <input type="checkbox" class="form-check-input" id="selectAllStudents"
+                   title="Select all students (all pages)" aria-label="Select all students">
+          </th>
+          <th>Student</th>
+          <th>College</th>
+          <th>Year</th>
+          <th>Points</th>
+          <th>Status</th>
+          <th class="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in profiles %}
+        <tr>
+          <td>
+            <input type="checkbox" class="form-check-input student-select" value="{{ p.pk }}"
+                   aria-label="Select {{ p.user.email }}">
+          </td>
+          <td>
+            <button type="button"
+                    class="btn btn-link p-0 text-start text-decoration-none student-view-btn"
+                    hx-get="{% url 'adminpanel:student_detail' p.pk %}"
+                    hx-target="#apFormModalBody"
+                    hx-swap="innerHTML"
+                    title="View details">
+              <strong class="d-block" style="color:var(--ap-text, #0f172a)">{{ p.user.get_full_name|default:p.user.email }}</strong>
+              <span class="small text-muted">{{ p.user.email }}</span>
+            </button>
+          </td>
+          <td>
+            {{ p.college|default:"—" }}
+            {% if p.college_location %}<div class="small text-muted">{{ p.college_location }}</div>{% endif %}
+          </td>
+          <td>{{ p.get_year_display|default:p.year|default:"—" }}</td>
+          <td>{{ p.reward_points }}</td>
+          <td>
+            {% if p.user.is_active %}
+            <span class="badge text-bg-success">Active</span>
+            {% else %}
+            <span class="badge text-bg-secondary">Inactive</span>
+            {% endif %}
+          </td>
+          <td class="text-end text-nowrap">
+            <button type="button"
+                    class="btn btn-outline-primary btn-icon"
+                    data-bs-toggle="tooltip"
+                    title="Edit"
+                    hx-get="{% url 'adminpanel:student_edit' p.pk %}"
+                    hx-target="#apFormModalBody"
+                    hx-swap="innerHTML">
+              <i class="fas fa-pen"></i>
+            </button>
+            <a class="btn btn-outline-secondary btn-icon"
+               href="{% url 'adminpanel:student_email' p.pk %}"
+               data-bs-toggle="tooltip"
+               title="Send email">
+              <i class="fas fa-envelope"></i>
+            </a>
+            {% if p.user.is_active %}
+            <form method="post" action="{% url 'adminpanel:student_toggle' p.pk %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="set_active" value="0">
+              <button class="btn btn-outline-warning btn-icon" type="submit"
+                      data-bs-toggle="tooltip" title="Deactivate">
+                <i class="fas fa-user-slash"></i>
+              </button>
+            </form>
+            {% else %}
+            <form method="post" action="{% url 'adminpanel:student_toggle' p.pk %}" class="d-inline">
+              {% csrf_token %}
+              <input type="hidden" name="set_active" value="1">
+              <button class="btn btn-outline-success btn-icon" type="submit"
+                      data-bs-toggle="tooltip" title="Activate">
+                <i class="fas fa-user-check"></i>
+              </button>
+            </form>
+            {% endif %}
+            <button type="button"
+                    class="btn btn-outline-danger btn-icon"
+                    title="Delete"
+                    data-bs-toggle="modal"
+                    data-bs-target="#apConfirmModal"
+                    data-action="{% url 'adminpanel:student_delete' p.pk %}"
+                    data-message="Delete student “{{ p.user.get_full_name|default:p.user.email }}”? This cannot be undone.">
+              <i class="fas fa-trash"></i>
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="text-muted">No students found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% if is_paginated %}<div class="mt-3">{% include "components/pagination.html" %}</div>{% endif %}
+
+{# Bulk email modal #}
+<div class="modal fade" id="bulkStudentMailModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <form method="post" action="{% url 'adminpanel:students_bulk_email' %}" id="bulkStudentMailForm">
+        {% csrf_token %}
+        {{ bulk_mail_form.selected_ids }}
+        <div class="modal-header">
+          <h2 class="modal-title h5">Email selected students</h2>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted">Sending to <strong id="bulkMailCount">0</strong> selected student(s). Write text → preview → confirm → send.</p>
+          <div class="mb-3">
+            <label class="form-label" for="{{ bulk_mail_form.subject.id_for_label }}">Subject</label>
+            {{ bulk_mail_form.subject }}
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="{{ bulk_mail_form.body_text.id_for_label }}">Message (plain text)</label>
+            {{ bulk_mail_form.body_text }}
+          </div>
+          <div class="mb-3">
+            <button type="button"
+                    class="btn btn-outline-secondary btn-sm"
+                    hx-post="{% url 'adminpanel:email_preview' %}"
+                    hx-target="#bulkStudentMailPreview"
+                    hx-swap="innerHTML"
+                    hx-include="#bulk_mail_subject, #bulk_mail_body_text, #bulkStudentMailForm [name=csrfmiddlewaretoken]">
+              <i class="fas fa-eye me-1"></i> Generate HTML preview
+            </button>
+          </div>
+          <div id="bulkStudentMailPreview" class="mb-3"></div>
+          <div class="form-check">
+            {{ bulk_mail_form.preview_confirmed }}
+            <label class="form-check-label" for="{{ bulk_mail_form.preview_confirmed.id_for_label }}">{{ bulk_mail_form.preview_confirmed.label }}</label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-ap" id="bulkEmailSendBtn" disabled>
+            <i class="fas fa-paper-plane me-1"></i> Send
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  var STORAGE_KEY = 'pm_admin_student_selection';
+  var root = document.getElementById('studentsSelectionRoot');
+  var form = document.getElementById('studentsBulkForm');
+  if (!root || !form) return;
+
+  var selectAll = document.getElementById('selectAllStudents');
+  var bar = document.getElementById('studentsBulkBar');
+  var countEl = document.getElementById('studentsSelectedCount');
+  var mailBtn = document.getElementById('bulkMailBtn');
+  var deleteBtn = document.getElementById('bulkDeleteBtn');
+  var clearBtn = document.getElementById('clearStudentSelection');
+  var bulkActions = form.querySelectorAll('[data-bulk-action]');
+  var mailCount = document.getElementById('bulkMailCount');
+  var selectedIdsInput = document.getElementById('bulk_mail_selected_ids');
+  var hiddenWrap = document.getElementById('bulkSelectedHidden');
+  var idsUrl = root.getAttribute('data-ids-url') || '{% url "adminpanel:students_ids" %}';
+  var filterKey = root.getAttribute('data-filter-key') || '';
+  var selectingAll = false;
+
+  function pageBoxes() {
+    return root.querySelectorAll('.student-select');
+  }
+
+  function loadSelection() {
+    try {
+      var raw = sessionStorage.getItem(STORAGE_KEY);
+      if (!raw) return { filterKey: filterKey, ids: [] };
+      var data = JSON.parse(raw);
+      if (!data || typeof data !== 'object') return { filterKey: filterKey, ids: [] };
+      if ((data.filterKey || '') !== filterKey) return { filterKey: filterKey, ids: [] };
+      return { filterKey: filterKey, ids: Array.isArray(data.ids) ? data.ids.map(String) : [] };
+    } catch (e) {
+      return { filterKey: filterKey, ids: [] };
+    }
+  }
+
+  function setSelectedIds(ids) {
+    var unique = Array.from(new Set(ids.map(String)));
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ filterKey: filterKey, ids: unique }));
+    return unique;
+  }
+
+  function getSelectedIds() { return loadSelection().ids; }
+
+  function addId(id) {
+    var ids = getSelectedIds();
+    if (ids.indexOf(String(id)) === -1) ids.push(String(id));
+    setSelectedIds(ids);
+  }
+
+  function removeId(id) {
+    setSelectedIds(getSelectedIds().filter(function (x) { return x !== String(id); }));
+  }
+
+  function restorePageCheckboxes() {
+    var selected = new Set(getSelectedIds());
+    pageBoxes().forEach(function (cb) {
+      cb.checked = selected.has(String(cb.value));
+    });
+  }
+
+  function injectHiddenInputs(ids) {
+    if (!hiddenWrap) return;
+    hiddenWrap.innerHTML = '';
+    ids.forEach(function (id) {
+      var inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.name = 'selected';
+      inp.value = id;
+      hiddenWrap.appendChild(inp);
+    });
+  }
+
+  function syncBulkUI() {
+    var ids = getSelectedIds();
+    var n = ids.length;
+    countEl.textContent = n;
+    if (mailCount) mailCount.textContent = n;
+    bar.classList.toggle('d-none', n === 0);
+    mailBtn.disabled = n === 0;
+    deleteBtn.disabled = n === 0;
+    bulkActions.forEach(function (btn) { btn.disabled = n === 0; });
+    if (selectedIdsInput) selectedIdsInput.value = ids.join(',');
+    injectHiddenInputs(ids);
+
+    if (selectAll) {
+      var boxes = pageBoxes();
+      var pageIds = Array.prototype.map.call(boxes, function (cb) { return String(cb.value); });
+      var selectedSet = new Set(ids);
+      var pageSelected = pageIds.filter(function (id) { return selectedSet.has(id); }).length;
+      selectAll.checked = pageIds.length > 0 && pageSelected === pageIds.length;
+      selectAll.indeterminate = pageSelected > 0 && pageSelected < pageIds.length;
+      selectAll.title = selectingAll
+        ? 'Loading all students…'
+        : 'Select all students across all pages (current filters)';
+    }
+  }
+
+  restorePageCheckboxes();
+  syncBulkUI();
+
+  root.addEventListener('change', function (e) {
+    if (!e.target.classList.contains('student-select')) return;
+    if (e.target.checked) addId(e.target.value);
+    else removeId(e.target.value);
+    syncBulkUI();
+  });
+
+  if (selectAll) {
+    selectAll.addEventListener('change', function () {
+      if (selectAll.checked) {
+        selectingAll = true;
+        selectAll.disabled = true;
+        fetch(idsUrl, { credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var ids = (data.ids || []).map(String);
+            setSelectedIds(ids);
+            restorePageCheckboxes();
+            syncBulkUI();
+            if (window.PMToast) window.PMToast.success('Selected ' + ids.length + ' student(s) across all pages.');
+          })
+          .catch(function () {
+            if (window.PMToast) window.PMToast.error('Could not select all students. Try again.');
+            selectAll.checked = false;
+          })
+          .finally(function () {
+            selectingAll = false;
+            selectAll.disabled = false;
+            syncBulkUI();
+          });
+      } else {
+        setSelectedIds([]);
+        restorePageCheckboxes();
+        syncBulkUI();
+      }
+    });
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function () {
+      setSelectedIds([]);
+      restorePageCheckboxes();
+      syncBulkUI();
+    });
+  }
+
+  form.addEventListener('submit', function () {
+    injectHiddenInputs(getSelectedIds());
+    setSelectedIds([]);
+  });
+
+  var mailForm = document.getElementById('bulkStudentMailForm');
+  if (mailForm) {
+    mailForm.addEventListener('submit', function () {
+      var ids = getSelectedIds();
+      if (selectedIdsInput) selectedIdsInput.value = ids.join(',');
+      setSelectedIds([]);
+    });
+  }
+
+  var confirmForm = document.getElementById('apConfirmForm');
+  if (confirmForm) {
+    confirmForm.addEventListener('submit', function () {
+      if (confirmForm.action.indexOf('/students/bulk') !== -1) setSelectedIds([]);
+    });
+  }
+
+  mailBtn.addEventListener('click', function () {
+    var ids = getSelectedIds();
+    if (!ids.length) return;
+    if (selectedIdsInput) selectedIdsInput.value = ids.join(',');
+    if (mailCount) mailCount.textContent = ids.length;
+    var previewBox = document.getElementById('bulk_mail_preview_confirmed');
+    var sendBtn = document.getElementById('bulkEmailSendBtn');
+    if (previewBox) { previewBox.checked = false; previewBox.disabled = true; }
+    if (sendBtn) sendBtn.disabled = true;
+    document.getElementById('bulkStudentMailPreview').innerHTML = '';
+    bootstrap.Modal.getOrCreateInstance(document.getElementById('bulkStudentMailModal')).show();
+  });
+
+  deleteBtn.addEventListener('click', function () {
+    var ids = getSelectedIds();
+    var n = ids.length;
+    if (!n) return;
+    var confirmModal = document.getElementById('apConfirmModal');
+    var confirmFormEl = document.getElementById('apConfirmForm');
+    document.getElementById('apConfirmText').textContent =
+      'Delete ' + n + ' selected student(s)? This cannot be undone.';
+    document.getElementById('apConfirmSubmit').innerHTML = '<i class="fas fa-trash me-1"></i> Delete';
+    confirmFormEl.action = '{% url "adminpanel:students_bulk" %}';
+    confirmFormEl.querySelectorAll('input[name="selected"], input[name="action"]').forEach(function (el) { el.remove(); });
+    var actionInput = document.createElement('input');
+    actionInput.type = 'hidden';
+    actionInput.name = 'action';
+    actionInput.value = 'delete';
+    confirmFormEl.appendChild(actionInput);
+    ids.forEach(function (id) {
+      var inp = document.createElement('input');
+      inp.type = 'hidden';
+      inp.name = 'selected';
+      inp.value = id;
+      confirmFormEl.appendChild(inp);
+    });
+    bootstrap.Modal.getOrCreateInstance(confirmModal).show();
+  });
+})();
+</script>
+{% endblock %}

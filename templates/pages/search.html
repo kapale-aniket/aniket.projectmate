@@ -1,0 +1,29 @@
+{% extends "base/base.html" %}
+{% block title %}Search — Aniket.ProjectMate{% endblock %}
+{% block content %}
+<section class="pm-section">
+  <div class="container">
+    <h1 class="section-title">Search results{% if q %} for “{{ q }}”{% endif %}</h1>
+    <form method="get" class="mb-4" style="max-width:480px">
+      <div class="input-group">
+        <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Search classes, courses, announcements...">
+        <button class="btn btn-pm" type="submit">Search</button>
+      </div>
+    </form>
+    <div class="row g-4">
+      <div class="col-md-4">
+        <h2 class="h5">Classes</h2>
+        {% for c in classes %}<a href="{{ c.get_absolute_url }}" class="d-block mb-2">{{ c.title }}</a>{% empty %}<p class="text-muted small">None</p>{% endfor %}
+      </div>
+      <div class="col-md-4">
+        <h2 class="h5">Courses</h2>
+        {% for c in courses %}<a href="{{ c.get_absolute_url }}" class="d-block mb-2">{{ c.title }}</a>{% empty %}<p class="text-muted small">None</p>{% endfor %}
+      </div>
+      <div class="col-md-4">
+        <h2 class="h5">Announcements</h2>
+        {% for a in announcements %}<a href="{{ a.get_absolute_url }}" class="d-block mb-2">{{ a.title }}</a>{% empty %}<p class="text-muted small">None</p>{% endfor %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

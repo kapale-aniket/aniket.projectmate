@@ -1,0 +1,40 @@
+{% if error %}
+<div class="alert alert-warning py-2 mb-0">{{ error }}</div>
+{% else %}
+<div class="email-preview-wrap">
+  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+    <div>
+      <div class="small text-muted">Generated email format</div>
+      <strong class="small">{{ subject }}</strong>
+    </div>
+    <span class="badge text-bg-success"><i class="fas fa-check me-1"></i> Ready to send</span>
+  </div>
+  <iframe class="email-preview-frame"
+          title="Email preview"
+          sandbox=""
+          srcdoc="{{ body_html|escape }}"></iframe>
+  <p class="small text-muted mb-0 mt-2">
+    Review the layout above. If it looks good, tick the confirmation checkbox and send.
+  </p>
+</div>
+<script>
+  (function () {
+    var box =
+      document.getElementById("id_preview_confirmed") ||
+      document.getElementById("bulk_mail_preview_confirmed");
+    var sendBtn =
+      document.getElementById("bulkEmailSendBtn") ||
+      document.getElementById("emailSendBtn");
+    if (box) {
+      box.disabled = false;
+      box.checked = false;
+    }
+    if (sendBtn) {
+      sendBtn.disabled = true;
+    }
+    if (box && sendBtn) {
+      box.onchange = function () { sendBtn.disabled = !box.checked; };
+    }
+  })();
+</script>
+{% endif %}

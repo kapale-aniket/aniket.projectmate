@@ -1,0 +1,48 @@
+{% extends "adminpanel/base.html" %}
+{% load static %}
+{% block page_title %}LinkedIn session{% endblock %}
+{% block extra_css %}<link href="{% static 'css/linkedin-admin.css' %}" rel="stylesheet">{% endblock %}
+{% block content %}
+{% include "adminpanel/linkedin/_nav.html" %}
+{% csrf_token %}
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="ap-card">
+      <div class="d-flex justify-content-between align-items-start mb-2">
+        <div>
+          <h2 class="h6 mb-1">LinkedIn browser session</h2>
+          <p class="small text-muted mb-0">Opens Chromium for manual sign-in. Cookies are saved for scrapers.</p>
+        </div>
+        <span class="badge {% if session.valid %}text-bg-success{% else %}text-bg-warning{% endif %}">
+          {% if session.valid %}Active{% else %}Not logged in{% endif %}
+        </span>
+      </div>
+      {% if other_task_busy %}
+      <div class="alert alert-warning py-2 small">{{ busy_task.task_type_label|default:"Another scraper" }} is running — you can still refresh the session.</div>
+      {% endif %}
+      <ol class="small text-muted ps-3 mb-3">
+        <li>Click Start session login</li>
+        <li>Sign in to LinkedIn in the browser window</li>
+        <li>Wait until the window closes / status shows Active</li>
+      </ol>
+      <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-ap" id="liStartSession" data-task-type="session">
+          <i class="fas fa-right-to-bracket me-1"></i> Start session login
+        </button>
+        <button type="button" class="btn btn-outline-danger btn-sm" id="liStopTask" hidden>Stop</button>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="ap-card">
+      <h2 class="h6 mb-2">Login progress</h2>
+      <div class="small text-muted mb-2" id="liTaskMeta">Ready</div>
+      <pre class="li-log" id="liLiveLog" aria-live="polite">Ready.</pre>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script src="{% static 'js/linkedin-admin.js' %}"></script>
+<script>PMLinkedIn.init({ taskType: "session", apiBase: "{% url 'linkedin:home' %}" });</script>
+{% endblock %}

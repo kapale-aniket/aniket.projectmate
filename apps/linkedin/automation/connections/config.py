@@ -1,0 +1,12 @@
+import os
+
+MAX_CONNECTIONS_PER_RUN = 100
+MIN_DELAY = 1
+MAX_DELAY = 2
+SCROLL_ROUNDS = 6
+MAX_PAGES = 200
+SEARCH_MIN_DELAY = 1
+SEARCH_MAX_DELAY = 2
+CONNECTION_KEYWORDS = ['Python Team Lead', 'Python Recruiter', 'HR Recruiter']
+CONNECTION_LOCATIONS = ['Pune', 'Bangalore']
+LOCATION_GEO_URNS = {'pune': '102713980', 'bangalore': '105214831', 'bengaluru': '105214831'}

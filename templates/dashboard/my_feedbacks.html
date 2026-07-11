@@ -1,0 +1,223 @@
+{% extends "base/base.html" %}
+{% block title %}My feedbacks — Dashboard{% endblock %}
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet">
+{% endblock %}
+{% block content %}
+<section class="pm-section">
+  <div class="container">
+    <div class="row g-4">
+      <div class="col-lg-3">{% include "dashboard/sidebar.html" %}</div>
+      <div class="col-lg-9" id="dash-content">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+          <div>
+            <h1 class="h3 display-font mb-1">My feedbacks</h1>
+            <p class="text-muted small mb-0">Reviews you’ve submitted and any replies from the team.</p>
+          </div>
+          <button type="button"
+                  class="btn btn-pm btn-sm"
+                  id="dashWriteFeedbackBtn"
+                  aria-controls="dashFeedbackForm"
+                  data-feedback-open
+                  hx-boost="false"
+                  {% if show_feedback_form %}hidden{% endif %}>
+            <i class="fas fa-plus me-1"></i> Write feedback
+          </button>
+        </div>
+
+        <div class="dash-feedback-form mb-4{% if show_feedback_form %} is-open{% endif %}"
+             id="dashFeedbackForm"
+             {% if not show_feedback_form %}hidden{% endif %}>
+          <div class="glass-card no-hover p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+              <div>
+                <h2 class="h5 display-font mb-0">Share feedback</h2>
+                <p class="text-muted small mb-0">Approved reviews can appear on the site. Earn points when approved.</p>
+              </div>
+              <button type="button"
+                      class="btn btn-sm btn-feedback-close"
+                      data-feedback-close
+                      aria-label="Close feedback form"
+                      hx-boost="false">
+                <i class="fas fa-times me-1"></i> Close
+              </button>
+            </div>
+            <form method="post" action="{% url 'dashboard:my_feedbacks' %}" novalidate hx-boost="false" class="pm-feedback-form mt-2">
+              {% csrf_token %}
+              {% include "components/feedback_form_fields.html" %}
+              <div class="d-flex flex-wrap gap-2 mt-2">
+                <button type="submit" class="btn btn-pm" {% if not has_eligible_workshops %}disabled{% endif %}>Submit feedback</button>
+                <button type="button" class="btn btn-pm-outline btn-sm" data-feedback-close hx-boost="false">Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="d-flex flex-column gap-3">
+          {% for fb in feedbacks %}
+          <article class="glass-card no-hover p-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-2">
+              <div class="d-flex align-items-start gap-3 flex-grow-1">
+                <div class="testimonial-avatar" aria-hidden="true">
+                  {% if fb.student.profile.profile_picture %}
+                  <img src="{{ fb.student.profile.profile_picture.url }}" alt="">
+                  {% else %}
+                  <span class="testimonial-avatar__fallback">
+                    {{ fb.student.first_name|default:fb.student.email|slice:":1"|upper }}{{ fb.student.last_name|default:""|slice:":1"|upper }}
+                  </span>
+                  {% endif %}
+                </div>
+                <div>
+                <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                  <span class="text-warning" aria-label="{{ fb.rating }} stars">
+                    {% for i in "12345" %}
+                      {% if forloop.counter <= fb.rating %}<i class="fas fa-star"></i>{% else %}<i class="far fa-star"></i>{% endif %}
+                    {% endfor %}
+                  </span>
+                  {% if fb.status == 'pending' %}
+                  <span class="pm-badge warning">{{ fb.get_status_display }}</span>
+                  {% elif fb.status == 'approved' %}
+                  <span class="pm-badge" style="background:rgba(16,185,129,.15);color:#059669">{{ fb.get_status_display }}</span>
+                  {% elif fb.status == 'rejected' %}
+                  <span class="pm-badge danger">{{ fb.get_status_display }}</span>
+                  {% else %}
+                  <span class="pm-badge">{{ fb.get_status_display }}</span>
+                  {% endif %}
+                  {% if fb.admin_liked %}
+                  <span class="pm-badge" style="background:rgba(236,72,153,.12);color:#db2777"><i class="fas fa-heart me-1"></i> Liked</span>
+                  {% endif %}
+                </div>
+                <p class="small text-muted mb-0">
+                  {% if fb.free_class %}{{ fb.free_class.title }}
+                  {% elif fb.course %}{{ fb.course.title }}
+                  {% else %}General feedback{% endif %}
+                  · {{ fb.created_at|date:"M d, Y" }}
+                </p>
+                </div>
+              </div>
+            </div>
+            <p class="mb-0">{{ fb.review }}</p>
+            {% if fb.suggestions %}
+            <p class="small text-muted mt-2 mb-0"><strong>Suggestions:</strong> {{ fb.suggestions }}</p>
+            {% endif %}
+            {% if fb.admin_reply %}
+            <div class="mt-3 p-3 rounded" style="background:rgba(26,54,93,.06);border:1px solid var(--pm-border)">
+              <div class="small fw-semibold mb-1"><i class="fas fa-reply me-1"></i> Team reply</div>
+              <p class="mb-0 small">{{ fb.admin_reply }}</p>
+              {% if fb.replied_at %}
+              <div class="small text-muted mt-1">{{ fb.replied_at|date:"M d, Y" }}</div>
+              {% endif %}
+            </div>
+            {% endif %}
+          </article>
+          {% empty %}
+          <div class="glass-card no-hover p-4 text-muted">
+            You haven’t submitted any feedback yet.
+            <button type="button"
+                    class="btn btn-link p-0 align-baseline"
+                    data-feedback-open
+                    hx-boost="false">Write your first review</button>.
+          </div>
+          {% endfor %}
+        </div>
+        {% include "components/pagination.html" %}
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+(function () {
+  var panel = document.getElementById("dashFeedbackForm");
+  var mainBtn = document.getElementById("dashWriteFeedbackBtn");
+
+  function initWorkshopSelect() {
+    var $el = $("#dashFeedbackForm .pm-select2");
+    if (!$el.length || typeof $.fn.select2 !== "function") return;
+    if ($el.hasClass("select2-hidden-accessible")) {
+      $el.select2("destroy");
+    }
+    $el.select2({
+      theme: "bootstrap-5",
+      width: "100%",
+      placeholder: $el.data("placeholder") || "Select a workshop…",
+      allowClear: false,
+      dropdownParent: $(panel),
+    });
+  }
+
+  function initReviewCounter() {
+    document.querySelectorAll("#dashFeedbackForm [data-pm-char-count='1']").forEach(function (el) {
+      if (el.dataset.counterBound === "1") return;
+      el.dataset.counterBound = "1";
+      var min = parseInt(el.getAttribute("data-pm-char-min") || "50", 10);
+      var max = parseInt(el.getAttribute("data-pm-char-max") || "100", 10);
+      var counter =
+        document.querySelector('[data-pm-char-counter][data-for="' + el.id + '"]') ||
+        el.parentElement.querySelector("[data-pm-char-counter]");
+      function paint() {
+        var n = (el.value || "").length;
+        if (counter) {
+          counter.textContent = n + " / " + max;
+          counter.classList.toggle("text-danger", n > 0 && (n < min || n > max));
+          counter.classList.toggle("text-success", n >= min && n <= max);
+        }
+      }
+      el.addEventListener("input", paint);
+      paint();
+    });
+  }
+
+  function setFeedbackFormOpen(open) {
+    if (!panel) return;
+    if (open) {
+      panel.classList.add("is-open");
+      panel.removeAttribute("hidden");
+      if (mainBtn) mainBtn.setAttribute("hidden", "");
+      initWorkshopSelect();
+      initReviewCounter();
+      if (window.PMMarkRequiredAsterisks) window.PMMarkRequiredAsterisks(panel);
+      window.setTimeout(function () {
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 40);
+    } else {
+      if (typeof $.fn.select2 === "function") {
+        var $el = $("#dashFeedbackForm .pm-select2");
+        if ($el.length && $el.hasClass("select2-hidden-accessible")) {
+          $el.select2("close");
+        }
+      }
+      panel.setAttribute("hidden", "");
+      panel.classList.remove("is-open");
+      if (mainBtn) mainBtn.removeAttribute("hidden");
+    }
+  }
+
+  document.querySelectorAll("[data-feedback-open]").forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      setFeedbackFormOpen(true);
+    });
+  });
+
+  document.querySelectorAll("[data-feedback-close]").forEach(function (btn) {
+    btn.addEventListener("click", function (e) {
+      e.preventDefault();
+      e.stopPropagation();
+      setFeedbackFormOpen(false);
+    });
+  });
+
+  if (panel && panel.classList.contains("is-open") && !panel.hasAttribute("hidden")) {
+    if (mainBtn) mainBtn.setAttribute("hidden", "");
+    initWorkshopSelect();
+    initReviewCounter();
+  }
+})();
+</script>
+{% endblock %}

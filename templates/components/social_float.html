@@ -1,0 +1,43 @@
+{# Floating social column — WhatsApp, Instagram, LinkedIn, YouTube #}
+{% with s=site_settings %}
+{% if s.show_whatsapp_icon and s.whatsapp_url or s.show_instagram_icon and s.instagram_url or s.show_linkedin_icon and s.linkedin_url or s.show_youtube_icon and s.youtube_url %}
+<nav class="pm-social-float" aria-label="Social links">
+  {% if s.show_whatsapp_icon and s.whatsapp_url %}
+  <a href="{{ s.whatsapp_url }}"
+     class="pm-social-float__btn pm-social-float__btn--whatsapp"
+     target="_blank" rel="noopener"
+     aria-label="Message me on WhatsApp"
+     data-tip="Message me on WhatsApp">
+    <i class="fab fa-whatsapp" aria-hidden="true"></i>
+  </a>
+  {% endif %}
+  {% if s.show_instagram_icon and s.instagram_url %}
+  <a href="{{ s.instagram_url }}"
+     class="pm-social-float__btn pm-social-float__btn--instagram"
+     target="_blank" rel="noopener"
+     aria-label="Follow me on Instagram"
+     data-tip="Follow me on Instagram">
+    <i class="fab fa-instagram" aria-hidden="true"></i>
+  </a>
+  {% endif %}
+  {% if s.show_linkedin_icon and s.linkedin_url %}
+  <a href="{{ s.linkedin_url }}"
+     class="pm-social-float__btn pm-social-float__btn--linkedin"
+     target="_blank" rel="noopener"
+     aria-label="Connect on LinkedIn"
+     data-tip="Connect on LinkedIn">
+    <i class="fab fa-linkedin-in" aria-hidden="true"></i>
+  </a>
+  {% endif %}
+  {% if s.show_youtube_icon and s.youtube_url %}
+  <a href="{{ s.youtube_url }}"
+     class="pm-social-float__btn pm-social-float__btn--youtube"
+     target="_blank" rel="noopener"
+     aria-label="Watch us on YouTube"
+     data-tip="Watch us on YouTube">
+    <i class="fab fa-youtube" aria-hidden="true"></i>
+  </a>
+  {% endif %}
+</nav>
+{% endif %}
+{% endwith %}
