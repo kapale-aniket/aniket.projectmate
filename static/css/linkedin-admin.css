@@ -99,7 +99,37 @@
 .li-file-row.active { background: rgba(26, 54, 93, 0.06); border-radius: 0.4rem; }
 [data-theme="dark"] .li-file-row.active { background: rgba(157, 180, 209, 0.12); }
 
-.li-checklist { max-height: 220px; overflow: auto; }
+.li-output-file-link {
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.li-output-file-link:hover { color: #1d4ed8; }
+.li-output-file-dl {
+  color: #64748b;
+  text-decoration: none;
+  line-height: 1;
+}
+.li-output-file-dl:hover { color: #2563eb; }
+
+.li-recent-outputs { border: 1px solid var(--ap-border, #e2e8f0); border-radius: 0.65rem; padding: 0.65rem 0.75rem; background: var(--ap-card-bg, #fff); }
+.li-recent-output-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--ap-border, #edf2f7);
+}
+.li-recent-output-item:last-child { border-bottom: none; }
+.li-recent-output-item .li-output-file-link { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+[data-theme="dark"] .li-output-file-link { color: #93c5fd; }
+[data-theme="dark"] .li-output-file-link:hover { color: #bfdbfe; }
+[data-theme="dark"] .li-recent-outputs { background: var(--ap-card-bg, #1e293b); border-color: var(--ap-border, #334155); }
+
+.li-checklist-wrap { border-color: var(--ap-border, #e2e8f0) !important; }
+.li-checklist { max-height: 260px; overflow: auto; }
 .li-checklist-item {
   display: flex;
   align-items: center;
@@ -108,6 +138,14 @@
   font-size: 0.82rem;
   border-bottom: 1px solid var(--ap-border, #edf2f7);
 }
+.li-checklist-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  cursor: pointer;
+}
+.li-checklist-skipped { opacity: 0.65; }
 .li-checklist-done { color: #166534; }
 .li-checklist-active { color: var(--ap-primary, #1a365d); font-weight: 600; }
 [data-theme="dark"] .li-checklist-done { color: #86efac; }
@@ -143,4 +181,66 @@
 #liScraperForm input[type="number"],
 #liSettingsForm .form-control {
   border-radius: 0.65rem;
+}
+
+/* Excel branding buttons (LinkedIn + Naukri job output) */
+.li-branding-bar { margin-top: 0.15rem; }
+.li-brand-btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 100%;
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+}
+.li-brand-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 10px rgba(15, 23, 42, 0.16); }
+.li-brand-btn.active { outline: 2px solid rgba(255, 255, 255, 0.85); outline-offset: 2px; }
+.li-brand-btn__value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 14rem;
+}
+.li-brand-btn--title {
+  background: linear-gradient(135deg, #312e81 0%, #4338ca 55%, #6366f1 100%);
+}
+.li-brand-btn--wa {
+  background: linear-gradient(135deg, #14532d 0%, #15803d 55%, #22c55e 100%);
+}
+.li-brand-btn--ig {
+  background: linear-gradient(135deg, #831843 0%, #db2777 55%, #f472b6 100%);
+}
+.li-branding-edit {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--ap-border, #e2e8f0);
+  border-radius: 0.65rem;
+  background: var(--ap-card-bg, #fff);
+}
+[data-theme="dark"] .li-branding-edit {
+  background: var(--ap-card-bg, #1e293b);
+  border-color: var(--ap-border, #334155);
+}
+
+/* Output preview table links */
+#liPreviewTableWrap a {
+  color: #2563eb;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+#liPreviewTableWrap a:hover {
+  color: #1d4ed8;
+}
+[data-theme="dark"] #liPreviewTableWrap a {
+  color: #93c5fd;
+}
+[data-theme="dark"] #liPreviewTableWrap a:hover {
+  color: #bfdbfe;
 }

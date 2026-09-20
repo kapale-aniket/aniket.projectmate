@@ -1,0 +1,90 @@
+{% extends "adminpanel/base.html" %}
+{% load static %}
+{% block page_title %}Naukri parsing{% endblock %}
+{% block extra_css %}
+<link href="{% static 'css/linkedin-admin.css' %}" rel="stylesheet">
+<link href="{% static 'css/naukri-admin.css' %}" rel="stylesheet">
+{% endblock %}
+{% block content %}
+{% include "adminpanel/naukri/_nav.html" %}
+{% csrf_token %}
+<div class="row g-3 nk-scraper-page" data-api-base="{% url 'naukri:home' %}">
+  <div class="col-lg-5">
+    <div class="ap-card">
+      <div class="mb-3">
+        <h2 class="h6 mb-1">Naukri apply flow</h2>
+        <p class="small text-muted mb-0">
+          1) Save today’s <strong>Connected by Email</strong> applications<br>
+          2) Scrape recommended jobs containing <strong>python</strong><br>
+          3) Select 5 and multi-apply
+        </p>
+      </div>
+
+      {% if not session_ready %}
+      <div class="alert alert-warning py-2 small">
+        Naukri session not saved.
+        <a href="{% url 'naukri:session' %}">Save session</a> first (login once).
+      </div>
+      {% else %}
+      <div class="alert alert-success py-2 small"><i class="fas fa-check me-1"></i> Session ready</div>
+      {% endif %}
+
+      <form id="nkApplyForm">
+        <div class="mb-3">
+          <label class="form-label">Job keyword filter</label>
+          {{ form.job_keyword }}
+          <div class="form-text">Only recommended jobs containing this word are scraped/applied.</div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Multi-apply batch size</label>
+          {{ form.multi_apply_batch_size }}
+          <div class="form-text">Select this many jobs, then click Naukri multi-apply.</div>
+        </div>
+        <div class="form-check mb-3">
+          {{ form.headless }}
+          <label class="form-check-label" for="{{ form.headless.id_for_label }}">Run headless (hide browser)</label>
+        </div>
+        <div class="li-action-grid">
+          <button type="button" class="btn btn-ap" id="nkStartTask" {% if not session_ready %}disabled{% endif %}>
+            <i class="fas fa-play"></i><span>Start</span>
+          </button>
+          <button type="button" class="btn btn-outline-danger" id="nkStopTask">
+            <i class="fas fa-stop"></i><span>Stop</span>
+          </button>
+          <button type="button" class="btn btn-outline-primary" id="nkShowScraping" {% if not session_ready %}disabled{% endif %}>
+            <i class="fas fa-display"></i><span>Show</span>
+          </button>
+        </div>
+        <p class="small text-muted mt-2 mb-0">
+          <strong>Show</strong> opens a visible Naukri browser window (and live preview).
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-7">
+    <div class="ap-card mb-3">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 mb-0">Live progress</h2>
+        <span class="badge text-bg-secondary" id="nkStatusBadge">Idle</span>
+      </div>
+      <div class="small" id="nkTaskMeta">Ready</div>
+    </div>
+
+    <div class="ap-card mb-3 d-none" id="nkBrowserPreview">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 mb-0">Live Naukri window</h2>
+        <button type="button" class="btn btn-sm btn-outline-secondary" id="nkHideScraping">Hide</button>
+      </div>
+      <div id="nkPreviewPlaceholder" class="small text-muted py-4 text-center">Waiting for browser frames…</div>
+      <img id="nkPreviewImg" class="img-fluid rounded border d-none" alt="Naukri live preview">
+    </div>
+
+    <div class="ap-card">
+      <h2 class="h6 mb-2">System logs</h2>
+      <div id="nkLogs" class="li-logs small font-monospace" style="max-height:420px;overflow:auto;white-space:pre-wrap"></div>
+    </div>
+  </div>
+</div>
+<script src="{% static 'js/naukri-admin.js' %}"></script>
+{% endblock %}

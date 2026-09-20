@@ -2,16 +2,19 @@ import re
 from urllib.parse import parse_qs, urlparse
 
 from common.helpers import invite_delay
+from connections.people_search import RESULT_CARD_SELECTOR
 
-CONNECT_SELECTORS = (
-    "main a[href*='/preload/search-custom-invite/']",
-    "button[aria-label*='to connect']",
+CONNECT_LINK_SELECTOR = "a[href*='/preload/search-custom-invite/']"
+CONNECT_BUTTON_SELECTORS = (
+    CONNECT_LINK_SELECTOR,
+    "button[aria-label*='connect' i]",
+    "button[aria-label*='Invite' i]",
 )
-CONNECT_BUTTON_SELECTOR = CONNECT_SELECTORS[0]
 
 SEND_WITHOUT_NOTE_LABELS = (
     "Send without a note",
     "Send now",
+    "Send",
 )
 
 
@@ -52,12 +55,12 @@ def dismiss_open_dialogs(page):
 
 def click_connect_target(target):
     try:
-        target.first.scroll_into_view_if_needed()
-        target.first.click(timeout=8000)
+        target.scroll_into_view_if_needed()
+        target.click(timeout=8000)
         return True
     except Exception:
         try:
-            target.first.evaluate("el => el.click()")
+            target.evaluate("el => el.click()")
             return True
         except Exception:
             return False
@@ -120,9 +123,11 @@ def click_send_without_note_button(dialog):
 def confirm_invite_dialog(page):
     dialog = page.locator("div[role='dialog']")
     try:
-        dialog.first.wait_for(state="visible", timeout=8000)
+        dialog.first.wait_for(state="visible", timeout=5000)
     except Exception:
-        return False
+        # Some flows send immediately with no modal.
+        page.wait_for_timeout(800)
+        return True
 
     page.wait_for_timeout(500)
 
@@ -145,25 +150,169 @@ def confirm_invite_dialog(page):
     return True
 
 
-def collect_connect_targets(page):
+def _card_is_connectable(card):
+    try:
+        if card.locator("button[aria-label*='Message' i]").count() > 0:
+            return False
+        if card.locator("button[aria-label*='Pending' i]").count() > 0:
+            return False
+        text = card.inner_text().lower()
+        if "pending" in text and "connect" not in text:
+            return False
+    except Exception:
+        pass
+    return True
+
+
+def _card_connect_button(card):
+    for selector in CONNECT_BUTTON_SELECTORS:
+        element = card.locator(selector).first
+        if element.count() > 0:
+            return element
+
+    connect_btn = card.locator("button").filter(
+        has_text=re.compile(r"^\s*Connect\s*$", re.I)
+    )
+    if connect_btn.count() > 0:
+        return connect_btn.first
+
+    return None
+
+
+def _collect_connect_targets_from_cards(page):
+    targets = []
+    seen = set()
+    cards = page.locator(RESULT_CARD_SELECTOR)
+    card_count = cards.count()
+
+    for index in range(card_count):
+        card = cards.nth(index)
+        if not _card_is_connectable(card):
+            continue
+
+        button = _card_connect_button(card)
+        if button is None:
+            continue
+
+        href = button.get_attribute("href") or ""
+        aria_label = button.get_attribute("aria-label") or ""
+        vanity = ""
+        if href:
+            vanity = parse_qs(urlparse(href).query).get("vanityName", [""])[0]
+
+        key = vanity or href or aria_label or f"card-{index}"
+        if key in seen:
+            continue
+        seen.add(key)
+
+        targets.append(
+            {
+                "card_index": index,
+                "href": href,
+                "aria_label": aria_label,
+                "vanity": vanity,
+            }
+        )
+
+    return targets
+
+
+def _collect_connect_targets_page_level(page):
     targets = []
     seen = set()
 
-    for selector in CONNECT_SELECTORS:
-        elements = page.locator(selector)
-        for i in range(elements.count()):
-            element = elements.nth(i)
+    for selector in CONNECT_BUTTON_SELECTORS:
+        elements = page.locator(f"main {selector}")
+        for index in range(elements.count()):
+            element = elements.nth(index)
             href = element.get_attribute("href") or ""
             aria_label = element.get_attribute("aria-label") or ""
-            key = href or aria_label
+            vanity = parse_qs(urlparse(href).query).get("vanityName", [""])[0] if href else ""
+            key = vanity or href or aria_label
             if not key or key in seen:
                 continue
             seen.add(key)
-            targets.append({"href": href, "aria_label": aria_label})
-        if targets:
-            break
+            targets.append(
+                {
+                    "card_index": None,
+                    "href": href,
+                    "aria_label": aria_label,
+                    "vanity": vanity,
+                }
+            )
+
+    plain_buttons = page.locator("main button").filter(
+        has_text=re.compile(r"^\s*Connect\s*$", re.I)
+    )
+    for index in range(plain_buttons.count()):
+        element = plain_buttons.nth(index)
+        aria_label = element.get_attribute("aria-label") or ""
+        key = aria_label or f"connect-btn-{index}"
+        if key in seen:
+            continue
+        seen.add(key)
+        targets.append(
+            {
+                "card_index": None,
+                "href": "",
+                "aria_label": aria_label,
+                "vanity": "",
+            }
+        )
 
     return targets
+
+
+def collect_connect_targets(page):
+    targets = _collect_connect_targets_from_cards(page)
+    if targets:
+        return targets
+    return _collect_connect_targets_page_level(page)
+
+
+def resolve_connect_target(page, target_info):
+    card_index = target_info.get("card_index")
+    if card_index is not None:
+        cards = page.locator(RESULT_CARD_SELECTOR)
+        if card_index < cards.count():
+            button = _card_connect_button(cards.nth(card_index))
+            if button is not None:
+                return button
+
+    vanity = target_info.get("vanity") or ""
+    if vanity:
+        link = page.locator(
+            f"main a[href*='search-custom-invite'][href*='{vanity}']"
+        ).first
+        if link.count() > 0:
+            return link
+
+    href = target_info.get("href") or ""
+    if href:
+        link = page.locator(f'main a[href*="{href.split("?")[0].split("/")[-1]}"]').first
+        if link.count() > 0 and "search-custom-invite" in (link.get_attribute("href") or ""):
+            return link
+
+    aria_label = target_info.get("aria_label") or ""
+    if aria_label:
+        button = page.get_by_role("button", name=re.compile(re.escape(aria_label), re.I))
+        if button.count() > 0:
+            return button.first
+
+    return None
+
+
+def invite_sent_on_card(page, card_index):
+    if card_index is None:
+        return False
+    try:
+        cards = page.locator(RESULT_CARD_SELECTOR)
+        if card_index >= cards.count():
+            return False
+        text = cards.nth(card_index).inner_text().lower()
+        return "pending" in text
+    except Exception:
+        return False
 
 
 def send_connection_invites(page, logger, keyword, location, invites_remaining, min_delay, max_delay):
@@ -181,19 +330,14 @@ def send_connection_invites(page, logger, keyword, location, invites_remaining, 
 
         dismiss_open_dialogs(page)
 
-        href = target_info["href"]
-        aria_label = target_info["aria_label"]
-        if href:
-            target = page.locator(f'main a[href="{href}"]')
-        elif aria_label:
-            target = page.locator(f'button[aria-label="{aria_label}"]')
-        else:
+        target = resolve_connect_target(page, target_info)
+        if target is None:
             continue
 
-        if target.count() == 0:
-            continue
-
-        name = name_from_connect_target(href=href, aria_label=aria_label)
+        name = name_from_connect_target(
+            href=target_info.get("href"),
+            aria_label=target_info.get("aria_label"),
+        )
         if not click_connect_target(target):
             logger.info(f"Could not click Connect for {name}")
             dismiss_open_dialogs(page)
@@ -201,7 +345,8 @@ def send_connection_invites(page, logger, keyword, location, invites_remaining, 
 
         page.wait_for_timeout(800)
 
-        if confirm_invite_dialog(page):
+        card_index = target_info.get("card_index")
+        if confirm_invite_dialog(page) or invite_sent_on_card(page, card_index):
             invites_sent += 1
             logger.log_invite_action(name, keyword, location, "sent")
         else:

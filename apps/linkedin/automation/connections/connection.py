@@ -18,8 +18,6 @@ from connections.config import (
     SEARCH_MAX_DELAY,
     SEARCH_MIN_DELAY,
 )
-from connections.connection_scraper import scrape_profiles_to_csv
-from connections.excel_writer import write_connections_excel
 from connections.connect import send_connection_invites
 from connections.people_search import (
     first_profile_slug,
@@ -65,13 +63,20 @@ def is_logged_in(page, logger):
 
 
 def run(keywords=None, locations=None):
-    keywords = keywords or CONNECTION_KEYWORDS
+    keywords = [k.strip() for k in (keywords or CONNECTION_KEYWORDS) if str(k).strip()]
     locations = locations if locations is not None else CONNECTION_LOCATIONS
-    if not locations:
-        locations = [""]
+    locations = [str(loc).strip() for loc in locations] if locations else [""]
+    if not keywords:
+        raise SystemExit("No keywords configured. Add at least one keyword.")
 
     logger = ConnectionLogger()
     logger.info(f"Starting (max {MAX_CONNECTIONS_PER_RUN} invites this run).")
+    logger.info(
+        f"Search plan: {len(keywords)} keyword(s) × {len(locations)} location(s)."
+    )
+    for kw in keywords:
+        for loc in locations:
+            logger.info(f"  - {kw} | {loc or 'anywhere'}")
     invites_sent = 0
 
     with launch_browser(blocked_resource_types={"image", "media", "font"}) as (
@@ -132,9 +137,7 @@ def run(keywords=None, locations=None):
                         previous_first_slug = first_slug
 
                         pause_search(page)
-                        scrape_profiles_to_csv(page, logger, keyword, location)
-                        pause_search(page)
-
+                        # No CSV/Excel output for connections — invites only.
                         invites_remaining = MAX_CONNECTIONS_PER_RUN - invites_sent
                         invites_sent += send_connection_invites(
                             page,
@@ -150,9 +153,9 @@ def run(keywords=None, locations=None):
                         page_num += 1
                     except Exception as exc:
                         logger.info(
-                            f"Search failed ({keyword} | {location} | page {page_num}): {exc}"
+                            f"Page failed ({keyword} | {location} | page {page_num}): {exc}"
                         )
-                        break
+                        page_num += 1
 
                 if page_num > MAX_PAGES:
                     logger.info(
@@ -162,13 +165,7 @@ def run(keywords=None, locations=None):
 
                 pause_search(page)
 
-    logger.info(f"Done. Sent {invites_sent} connection request(s).")
-    try:
-        exported = write_connections_excel()
-        if exported:
-            logger.info(f"Exported {exported} profile(s) to new_connections.xlsx")
-    except OSError as exc:
-        logger.info(f"Excel export skipped: {exc}")
+    logger.info(f"Done. Sent {invites_sent} connection request(s). No output file created.")
 
 
 if __name__ == "__main__":

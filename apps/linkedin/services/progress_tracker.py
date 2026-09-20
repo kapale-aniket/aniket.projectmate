@@ -113,6 +113,12 @@ def build_job_search_checklist(task):
     if not keywords or not locations:
         return []
 
+    from apps.linkedin.services.automation_path import ensure_automation_path
+
+    ensure_automation_path()
+    from common.search_skip import is_search_skipped, search_pair_key
+
+    skip_searches = config.get("skip_searches") or []
     progress = dict(task.progress or {})
     checkpoint = _read_job_checkpoint()
     kw_idx = checkpoint.get("keyword_index", progress.get("keyword_index", 0))
@@ -124,8 +130,11 @@ def build_job_search_checklist(task):
     items = []
     for ki, keyword in enumerate(keywords):
         for li, location in enumerate(locations):
+            key = search_pair_key(keyword, location)
             linear = ki * len(locations) + li
-            if all_done or linear <= completed_linear:
+            if is_search_skipped(keyword, location, skip_searches):
+                status = "skipped"
+            elif all_done or linear <= completed_linear:
                 status = "done"
             elif linear == current_linear and task.status in {
                 ScraperTask.STATUS_PENDING,
@@ -137,10 +146,11 @@ def build_job_search_checklist(task):
                 status = "pending"
             items.append(
                 {
+                    "id": key,
                     "keyword": keyword,
                     "location": location,
                     "status": status,
-                    "label": f"{location} → {keyword}",
+                    "label": f"{location} -> {keyword}",
                 }
             )
     return items
@@ -164,7 +174,13 @@ def get_live_progress(task):
         keyword = keywords[kw_idx] if kw_idx < len(keywords) else (keywords[0] if keywords else "-")
         location = locations[loc_idx] if loc_idx < len(locations) else (locations[0] if locations else "-")
 
-        total_searches = max(1, len(keywords) * len(locations))
+        from apps.linkedin.services.automation_path import ensure_automation_path
+
+        ensure_automation_path()
+        from common.search_skip import count_active_searches
+
+        skip_searches = config.get("skip_searches") or []
+        total_searches = max(1, count_active_searches(keywords, locations, skip_searches))
         current_search = kw_idx * max(1, len(locations)) + loc_idx
         search_pct = (current_search / total_searches) * 100
         page_pct = ((page_num + 1) / max(1, max_pages)) * (100 / total_searches)

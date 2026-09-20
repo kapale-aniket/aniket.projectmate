@@ -19,6 +19,7 @@ urlpatterns = [
     path("api/task/status/", api_views.api_task_status, name="api_task_status"),
     path("api/task/start/", api_views.api_task_start, name="api_task_start"),
     path("api/task/control/", api_views.api_task_control, name="api_task_control"),
+    path("api/task/skip-searches/", api_views.api_task_skip_searches, name="api_task_skip_searches"),
     path("api/logs/", api_views.api_logs, name="api_logs"),
     path("api/stats/", api_views.api_stats, name="api_stats"),
     path("api/files/", api_views.api_files, name="api_files"),

@@ -1,20 +1,32 @@
 {
   "job": {
     "keywords": [
-      "Python Developer Fresher",
-      "Django Developer Fresher"
+      "Djanago developer fresher",
+      "python developer fresher",
+      "java developer",
+      "data analytics fresher"
     ],
     "locations": [
-      "Pune",
-      "Bangalore"
+      "bangalore",
+      "pune",
+      "navi mumbai",
+      "hyderabad"
     ],
     "max_pages": 40,
     "max_jobs": 0,
-    "max_job_age_hours": 2,
+    "max_job_age_hours": 24,
     "search_min_delay": 1.0,
     "search_max_delay": 2.0,
     "headless": false,
     "auto_resume": true,
+    "sheet_title": "aniket.projectmate daily jobs",
+    "whatsapp_group_url": "https://chat.whatsapp.com/GV7XEmVREg9KrB1sr5dZwL",
+    "whatsapp_group_name": "Be Placement Ready",
+    "instagram_url": "https://www.instagram.com/aniket.projectmate?igsh=MWtkbWs3bGE1N2Jtag==",
+    "instagram_handle": "aniket.projectmate",
+    "easy_apply_only": false,
+    "auto_apply": false,
+    "skip_previous_jobs": false,
     "excel_format": {
       "sheet_title": "aniket.projectmate Jobs",
       "sheet_name": "Todays Jobs",
@@ -73,7 +85,7 @@
           "key": "freshers_eligible",
           "header": "Freshers Eligible",
           "width": 16,
-          "visible": false
+          "visible": true
         },
         {
           "key": "experience_required",
@@ -97,7 +109,7 @@
           "key": "package_lpa",
           "header": "Package (LPA)",
           "width": 14,
-          "visible": false
+          "visible": true
         },
         {
           "key": "posted_text",
@@ -122,16 +134,14 @@
   },
   "connection": {
     "keywords": [
-      "Python Team Lead",
-      "Python Recruiter",
-      "HR Recruiter"
+      "team lead python"
     ],
     "locations": [
-      "Pune",
-      "Bangalore"
+      "pune",
+      "hyderabad"
     ],
     "max_connections_per_run": 100,
-    "max_pages": 200,
+    "max_pages": 500,
     "min_delay": 1,
     "max_delay": 2,
     "scroll_rounds": 6,
@@ -169,7 +179,7 @@
           "key": "timestamp",
           "header": "Timestamp",
           "width": 20,
-          "visible": true
+          "visible": false
         },
         {
           "key": "name",
@@ -181,25 +191,25 @@
           "key": "headline",
           "header": "Headline",
           "width": 40,
-          "visible": true
+          "visible": false
         },
         {
           "key": "profile_url",
           "header": "Profile URL",
           "width": 50,
-          "visible": true
+          "visible": false
         },
         {
           "key": "keyword",
           "header": "Keyword",
           "width": 24,
-          "visible": true
+          "visible": false
         },
         {
           "key": "location",
           "header": "Location",
           "width": 18,
-          "visible": true
+          "visible": false
         },
         {
           "key": "connect_status",

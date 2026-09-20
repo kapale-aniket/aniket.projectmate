@@ -38,15 +38,26 @@ def _log(task, level, message):
     print(message, flush=True)
 
 
+def _as_keyword_list(value):
+    if not value:
+        return None
+    if isinstance(value, list):
+        return [str(item).strip() for item in value if str(item).strip()]
+    if isinstance(value, str):
+        return [part.strip() for part in value.replace(",", "\n").splitlines() if part.strip()]
+    text = str(value).strip()
+    return [text] if text else None
+
+
 def _apply_job_overrides(config):
     import job.config as cfg
 
-    keywords = config.get("keywords")
-    locations = config.get("locations")
+    keywords = _as_keyword_list(config.get("keywords"))
+    locations = _as_keyword_list(config.get("locations"))
     if keywords:
-        cfg.JOB_KEYWORDS = keywords if isinstance(keywords, list) else [keywords]
+        cfg.JOB_KEYWORDS = keywords
     if locations:
-        cfg.LOCATIONS = locations if isinstance(locations, list) else [locations]
+        cfg.LOCATIONS = locations
     if config.get("max_pages") is not None:
         cfg.MAX_PAGES = int(config["max_pages"])
     if config.get("max_jobs") is not None:
@@ -62,17 +73,19 @@ def _apply_job_overrides(config):
         cfg.SEARCH_MIN_DELAY = float(config["search_min_delay"])
     if config.get("search_max_delay") is not None:
         cfg.SEARCH_MAX_DELAY = float(config["search_max_delay"])
+    cfg.SKIP_SEARCHES = list(config.get("skip_searches") or [])
+    cfg.SKIP_PREVIOUS_JOBS = bool(config.get("skip_previous_jobs", False))
 
 
 def _apply_connection_overrides(config):
     import connections.config as cfg
 
-    keywords = config.get("keywords")
-    locations = config.get("locations")
+    keywords = _as_keyword_list(config.get("keywords"))
+    locations = _as_keyword_list(config.get("locations"))
     if keywords:
-        cfg.CONNECTION_KEYWORDS = keywords if isinstance(keywords, list) else [keywords]
+        cfg.CONNECTION_KEYWORDS = keywords
     if locations:
-        cfg.CONNECTION_LOCATIONS = locations if isinstance(locations, list) else [locations]
+        cfg.CONNECTION_LOCATIONS = locations
     if config.get("max_connections_per_run") is not None:
         cfg.MAX_CONNECTIONS_PER_RUN = int(config["max_connections_per_run"])
     if config.get("max_pages") is not None:
@@ -89,12 +102,22 @@ def _apply_posts_overrides(config):
 
 
 def _run_job(task):
-    from job.job import run
+    import importlib
+
+    import job.job_filter
+    import job.job as job_module
+
+    importlib.reload(job.job_filter)
+    importlib.reload(job_module)
+    run = job_module.run
     from job.scrape_state import clear_checkpoint
 
     config = task.config or {}
     os.environ["TERRA_NONINTERACTIVE"] = "1"
     _apply_job_overrides(config)
+    from apps.linkedin.services.search_skip_service import write_skip_searches
+
+    write_skip_searches(task.id, config.get("skip_searches") or [])
 
     if not config.get("resume", False):
         clear_checkpoint()
@@ -108,12 +131,8 @@ def _run_connection(task):
 
     config = task.config or {}
     _apply_connection_overrides(config)
-    keywords = config.get("keywords")
-    locations = config.get("locations")
-    if isinstance(keywords, str):
-        keywords = [k.strip() for k in keywords.split(",") if k.strip()]
-    if isinstance(locations, str):
-        locations = [l.strip() for l in locations.split(",") if l.strip()]
+    keywords = _as_keyword_list(config.get("keywords"))
+    locations = _as_keyword_list(config.get("locations"))
     run(keywords=keywords or None, locations=locations or None)
 
 
@@ -132,11 +151,17 @@ def _run_session(task):
 
 
 def run_task(task_id):
+    os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+    os.environ.setdefault("PYTHONUTF8", "1")
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
     import django
 
     django.setup()
     _setup_path()
+
+    from apps.linkedin.services.automation_bridge import _configure_stdout_encoding
+
+    _configure_stdout_encoding()
 
     from apps.linkedin.models import ActivityEvent, ScraperTask
     from apps.linkedin.services.automation_bridge import install_automation_hooks
@@ -158,6 +183,9 @@ def run_task(task_id):
             raise ValueError(f"Unknown task type: {task.task_type}")
         handler(task)
         task.refresh_from_db()
+        if task.status == ScraperTask.STATUS_STOPPED:
+            _log(task, "info", "Task stopped — partial Excel kept if jobs were collected.")
+            return
         task.mark_finished(ScraperTask.STATUS_COMPLETED)
         completion_msg = (task.progress or {}).get("completion_message")
         if not completion_msg and task.task_type == ScraperTask.TASK_JOB:
@@ -206,6 +234,10 @@ def run_task(task_id):
             detail=str(exc)[:500],
         )
         raise
+    finally:
+        from apps.linkedin.services.search_skip_service import clear_skip_searches
+
+        clear_skip_searches(task.id)
 
 
 if __name__ == "__main__":

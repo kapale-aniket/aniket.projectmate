@@ -16,16 +16,18 @@ from apps.linkedin.forms import (
 from apps.linkedin.models import ScraperTask
 from apps.linkedin.services.config_service import load_settings
 from apps.linkedin.services.settings_helpers import (
+    apply_last_task_form_defaults,
     config_lock_message,
     is_config_locked,
     settings_to_form,
 )
 from apps.linkedin.services.stats import (
-    attach_preview_rows_zipped,
+    apply_preview_view_filters,
     collect_logs,
     dashboard_stats,
     get_latest_job_output_file,
     list_output_files,
+    list_recent_job_output_files,
     log_automation_files,
     preview_file,
     recent_activity,
@@ -53,6 +55,7 @@ def _admin_required(view):
 def _scraper_context(request, form_class, task_type):
     ensure_settings_initialized()
     form = form_class()
+    apply_last_task_form_defaults(form, task_type)
     active = get_active_task()
     task_status = task_status_payload(active)
     other_task_busy = bool(active and active.is_active and active.task_type != task_type)
@@ -74,6 +77,7 @@ def _scraper_context(request, form_class, task_type):
         "app_settings": app_settings,
     }
     if task_type == ScraperTask.TASK_JOB:
+        ctx["recent_job_outputs"] = list_recent_job_output_files()
         ctx["latest_job_output"] = get_latest_job_output_file()
     return ctx
 
@@ -174,12 +178,8 @@ def logs_view(request):
 
 @_admin_required
 def output_view(request):
-    from apps.linkedin.services.filter_utils import (
-        filter_preview_rows,
-        filter_sort_files,
-        paginate_preview_rows,
-        sort_preview_rows,
-    )
+    from apps.linkedin.services.filter_utils import filter_sort_files
+    from apps.linkedin.services.stats import output_file_key, resolve_output_file_path
     from apps.linkedin.services.trash_service import list_trashed_files
 
     all_files = list_output_files()
@@ -189,25 +189,27 @@ def output_view(request):
     sort_dir = request.GET.get("order", "desc")
     files = filter_sort_files(all_files, search, file_type, sort_by, sort_dir)
 
-    selected = request.GET.get("file")
+    selected_raw = request.GET.get("file")
+    selected = ""
+    selected_path = ""
     preview_search = request.GET.get("preview_q", "")
     preview_sort = request.GET.get("preview_sort", "")
     preview_order = request.GET.get("preview_order", "asc")
     preview_page = request.GET.get("preview_page", "1")
     preview = None
-    if selected:
-        preview = preview_file(selected)
-        if preview and not preview.get("error"):
-            headers, rows = filter_preview_rows(
-                preview.get("headers", []), preview.get("rows", []), preview_search
-            )
-            rows = sort_preview_rows(headers, rows, preview_sort, preview_order)
-            page_rows, pagination = paginate_preview_rows(rows, preview_page)
-            pagination["previous_page"] = max(1, pagination["page"] - 1)
-            pagination["next_page"] = pagination["page"] + 1
-            preview = attach_preview_rows_zipped(
-                {**preview, "headers": headers, "rows": page_rows, "pagination": pagination}
-            )
+    if selected_raw:
+        selected_path = resolve_output_file_path(selected_raw) or ""
+        selected = output_file_key(selected_raw) if selected_path else selected_raw
+        if selected_path:
+            preview = preview_file(selected_path)
+            if preview and not preview.get("error"):
+                preview = apply_preview_view_filters(
+                    preview,
+                    preview_search=preview_search,
+                    preview_sort=preview_sort,
+                    preview_order=preview_order,
+                    preview_page=preview_page,
+                )
 
     show_trash = request.GET.get("trash", "").lower() in ("1", "true", "yes")
     return render(
@@ -216,6 +218,7 @@ def output_view(request):
         {
             "files": files,
             "selected": selected,
+            "selected_path": selected_path,
             "preview": preview,
             "search": search,
             "file_type": file_type,

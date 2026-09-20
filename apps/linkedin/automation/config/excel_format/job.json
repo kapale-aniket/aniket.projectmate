@@ -56,7 +56,7 @@
       "key": "freshers_eligible",
       "header": "Freshers Eligible",
       "width": 16,
-      "visible": false
+      "visible": true
     },
     {
       "key": "experience_required",
@@ -80,7 +80,7 @@
       "key": "package_lpa",
       "header": "Package (LPA)",
       "width": 14,
-      "visible": false
+      "visible": true
     },
     {
       "key": "posted_text",

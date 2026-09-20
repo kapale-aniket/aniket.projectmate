@@ -1,0 +1,19 @@
+/* Naukri admin subnav (shared look with LinkedIn) */
+.li-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.li-subnav a {
+  text-decoration: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid rgba(26, 54, 93, 0.15);
+  color: inherit;
+  font-size: 0.9rem;
+}
+.li-subnav a.active {
+  background: #1a365d;
+  color: #fff;
+  border-color: #1a365d;
+}

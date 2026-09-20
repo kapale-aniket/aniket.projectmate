@@ -52,10 +52,73 @@
       .filter(Boolean);
   }
 
+  function runFormStorageKey(taskType) {
+    return "linkedin_run_form_" + (taskType || "job");
+  }
+
+  function saveRunFormDraft(form, taskType) {
+    if (!form || !window.sessionStorage) return;
+    var draft = {};
+    form.querySelectorAll("input, textarea, select").forEach(function (el) {
+      if (!el.name || el.name === "csrfmiddlewaretoken") return;
+      if (el.type === "checkbox") draft[el.name] = el.checked;
+      else draft[el.name] = el.value;
+    });
+    try {
+      sessionStorage.setItem(runFormStorageKey(taskType), JSON.stringify(draft));
+    } catch (e) {}
+  }
+
+  function restoreRunFormDraft(form, taskType) {
+    if (!form || !window.sessionStorage) return false;
+    try {
+      var raw = sessionStorage.getItem(runFormStorageKey(taskType));
+      if (!raw) return false;
+      var draft = JSON.parse(raw);
+      var restored = false;
+      Object.keys(draft).forEach(function (name) {
+        var el = form.querySelector('[name="' + name + '"]');
+        if (!el) return;
+        if (el.type === "checkbox") el.checked = !!draft[name];
+        else el.value = draft[name] != null ? String(draft[name]) : "";
+        restored = true;
+      });
+      if (restored) {
+        form.querySelectorAll('textarea[name="keywords"], textarea[name="locations"]').forEach(function (el) {
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+        });
+      }
+      return restored;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function bindRunFormDraft(form, taskType) {
+    if (!form) return;
+    var draftTimer = null;
+    form.querySelectorAll("input, textarea, select").forEach(function (el) {
+      if (!el.name || el.name === "csrfmiddlewaretoken") return;
+      el.addEventListener("input", function () {
+        clearTimeout(draftTimer);
+        draftTimer = setTimeout(function () {
+          saveRunFormDraft(form, taskType);
+        }, 300);
+      });
+      el.addEventListener("change", function () {
+        saveRunFormDraft(form, taskType);
+      });
+    });
+  }
+
   function formConfig(form, taskType) {
     if (!form) return {};
     var fd = new FormData(form);
     if (taskType === "job") {
+      var skip = [];
+      if (window.PMScraperChecklist) {
+        skip = PMScraperChecklist.getSkipSearches(document.getElementById("liChecklist"));
+      }
       return {
         keywords: lines(fd.get("keywords")),
         locations: lines(fd.get("locations")),
@@ -63,7 +126,9 @@
         max_jobs: parseInt(fd.get("max_jobs") || "0", 10),
         max_job_age_hours: parseInt(fd.get("max_job_age_hours") || "24", 10),
         resume: !!fd.get("resume"),
+        skip_previous_jobs: !!fd.get("skip_previous_jobs"),
         headless: true,
+        skip_searches: skip,
       };
     }
     if (taskType === "connection") {
@@ -135,27 +200,38 @@
         return "[" + (l.time || "") + "] " + l.message;
       }).join("\n"));
     }
-    renderChecklist(data.search_checklist);
+    var taskActive = data && (
+      data.active ||
+      data.status === "running" ||
+      data.status === "paused" ||
+      data.status === "pending"
+    );
+    renderChecklist(data.search_checklist, taskActive);
   }
 
-  function renderChecklist(items) {
+  function renderChecklist(items, taskActive) {
     var panel = document.getElementById("liChecklistPanel");
     var list = document.getElementById("liChecklist");
-    if (!panel || !list) return;
-    if (!items || !items.length) {
-      panel.classList.add("d-none");
-      return;
-    }
-    panel.classList.remove("d-none");
-    setText("liChecklistCount", items.length + " searches");
-    list.innerHTML = items.map(function (item) {
-      var box = item.status === "done" ? "☑" : "☐";
-      var badge = "";
-      if (item.status === "active") badge = ' <span class="badge text-bg-primary">In progress</span>';
-      if (item.status === "paused") badge = ' <span class="badge text-bg-warning">Paused</span>';
-      return '<li class="li-checklist-item li-checklist-' + item.status + '"><span>' + box + "</span> " +
-        (item.label || "") + badge + "</li>";
-    }).join("");
+    var count = document.getElementById("liChecklistCount");
+    if (!window.PMScraperChecklist) return;
+    var form = document.getElementById("liScraperForm");
+    var local = PMScraperChecklist.buildFromForm(form);
+    var checkState = PMScraperChecklist.getLocalCheckState(list);
+    var merged = items && items.length
+      ? PMScraperChecklist.mergeServerItems(local, items)
+      : local;
+    merged.forEach(function (item) {
+      var key = item.id || PMScraperChecklist.searchKey(item.keyword, item.location);
+      if (Object.prototype.hasOwnProperty.call(checkState, key)) {
+        item.checked = checkState[key];
+      }
+    });
+    var liveSkip = !!taskActive;
+    PMScraperChecklist.render(list, count, panel, merged, {
+      interactive: true,
+      liveSkip: liveSkip,
+      keepPanelVisible: true,
+    });
   }
 
   function collectSettingsPayload(form) {
@@ -175,7 +251,159 @@
     return payload;
   }
 
-  function initSettings(base) {
+  function initBrandingButtons(base) {
+    var section = document.getElementById("liBrandingSection");
+    if (!section) return;
+    var form = document.getElementById("liSettingsForm");
+    var editPanel = document.getElementById("liBrandingEdit");
+    var editLabel = document.getElementById("liBrandingEditLabel");
+    var editPrimary = document.getElementById("liBrandingEditPrimary");
+    var editUrl = document.getElementById("liBrandingEditUrl");
+    var saveBtn = document.getElementById("liBrandingEditSave");
+    var cancelBtn = document.getElementById("liBrandingEditCancel");
+    var activeBtn = null;
+
+    function fieldInput(name) {
+      if (form) {
+        var inForm = form.querySelector('[name="' + name + '"]');
+        if (inForm) return inForm;
+      }
+      return document.querySelector('.li-branding-fields [name="' + name + '"]');
+    }
+
+    function truncate(val, max) {
+      val = String(val || "").trim();
+      if (!val) return "—";
+      return val.length > max ? val.slice(0, max - 1) + "\u2026" : val;
+    }
+
+    function syncButtons() {
+      section.querySelectorAll(".li-brand-btn").forEach(function (btn) {
+        var field = btn.getAttribute("data-brand-field");
+        var input = fieldInput(field);
+        var valEl = btn.querySelector(".li-brand-btn__value");
+        if (valEl) valEl.textContent = truncate(input && input.value, 36);
+      });
+    }
+
+    function closeEdit() {
+      if (editPanel) editPanel.classList.add("d-none");
+      activeBtn = null;
+      section.querySelectorAll(".li-brand-btn").forEach(function (b) {
+        b.classList.remove("active");
+      });
+    }
+
+    function persistBranding() {
+      if (!form) {
+        syncButtons();
+        return Promise.resolve();
+      }
+      return api(base + "api/settings/", { method: "POST", json: collectSettingsPayload(form) })
+        .then(function (data) {
+          toast(data.message || "Branding saved (LinkedIn & Naukri)");
+          syncButtons();
+        })
+        .catch(function (err) {
+          toast(err.message || "Save failed", false);
+        });
+    }
+
+    syncButtons();
+
+    section.querySelectorAll(".li-brand-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        if (activeBtn === btn) {
+          closeEdit();
+          return;
+        }
+        activeBtn = btn;
+        section.querySelectorAll(".li-brand-btn").forEach(function (b) {
+          b.classList.remove("active");
+        });
+        btn.classList.add("active");
+        var field = btn.getAttribute("data-brand-field");
+        var urlField = btn.getAttribute("data-brand-url-field");
+        var label = btn.getAttribute("data-brand-label") || "Edit";
+        if (editLabel) editLabel.textContent = label;
+        var primaryInput = fieldInput(field);
+        if (editPrimary) editPrimary.value = primaryInput ? primaryInput.value : "";
+        if (editUrl) {
+          if (urlField) {
+            editUrl.classList.remove("d-none");
+            var urlInput = fieldInput(urlField);
+            editUrl.value = urlInput ? urlInput.value : "";
+            editUrl.placeholder =
+              urlField.indexOf("whatsapp") >= 0
+                ? "https://chat.whatsapp.com/GV7XEmVREg9KrB1sr5dZwL"
+                : "https://www.instagram.com/aniket.projectmate";
+          } else {
+            editUrl.classList.add("d-none");
+            editUrl.value = "";
+          }
+        }
+        if (editPanel) editPanel.classList.remove("d-none");
+        if (editPrimary) editPrimary.focus();
+      });
+    });
+
+    function applyEdit() {
+      if (!activeBtn) return;
+      var field = activeBtn.getAttribute("data-brand-field");
+      var urlField = activeBtn.getAttribute("data-brand-url-field");
+      var primaryInput = fieldInput(field);
+      if (primaryInput && editPrimary) primaryInput.value = editPrimary.value.trim();
+      if (urlField && editUrl) {
+        var urlInput = fieldInput(urlField);
+        if (urlInput) urlInput.value = editUrl.value.trim();
+      }
+      closeEdit();
+      persistBranding();
+    }
+
+    if (saveBtn) saveBtn.addEventListener("click", applyEdit);
+    if (cancelBtn) cancelBtn.addEventListener("click", closeEdit);
+    if (editPrimary) {
+      editPrimary.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          applyEdit();
+        } else if (e.key === "Escape") {
+          closeEdit();
+        }
+      });
+    }
+    if (editUrl) {
+      editUrl.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          applyEdit();
+        } else if (e.key === "Escape") {
+          closeEdit();
+        }
+      });
+    }
+  }
+
+  var LINKEDIN_JOB_RUN_SYNC_FIELDS = [
+    { from: "job_keywords", to: "keywords" },
+    { from: "job_locations", to: "locations" },
+    { from: "job_max_pages", to: "max_pages" },
+    { from: "job_max_jobs", to: "max_jobs" },
+    { from: "job_max_age_hours", to: "max_job_age_hours" },
+  ];
+
+  function syncRunFormFromSettingsPanel(taskType) {
+    var settingsForm = document.getElementById("liSettingsForm");
+    var runForm = document.getElementById("liScraperForm");
+    if (!window.PMScraperChecklist || !settingsForm || !runForm) return;
+    var pairs = taskType === "job" ? LINKEDIN_JOB_RUN_SYNC_FIELDS : [];
+    if (pairs.length) {
+      PMScraperChecklist.syncRunFormFromSettings(settingsForm, runForm, pairs);
+    }
+  }
+
+  function initSettings(base, taskType) {
     var toggle = document.getElementById("liSettingsToggle");
     var run = document.getElementById("liRunPanel");
     var panel = document.getElementById("liSettingsPanel");
@@ -192,13 +420,15 @@
       save.addEventListener("click", function () {
         api(base + "api/settings/", { method: "POST", json: collectSettingsPayload(form) })
           .then(function (data) {
-            toast(data.message || "Settings saved");
+            syncRunFormFromSettingsPanel(taskType);
+            toast(data.message || "Settings saved — run form updated");
           })
           .catch(function (err) {
             toast(err.message || "Save failed", false);
           });
       });
     }
+    initBrandingButtons(base);
   }
 
   function initPreview(base) {
@@ -488,8 +718,34 @@
     var pollTimer = null;
     var currentTaskId = null;
 
-    initSettings(base);
+    initSettings(base, taskType);
     if (features.preview) initPreview(base);
+    var runForm = document.getElementById("liScraperForm");
+    if (runForm && taskType) {
+      restoreRunFormDraft(runForm, taskType);
+      bindRunFormDraft(runForm, taskType);
+    }
+    if (features.checklist && window.PMScraperChecklist) {
+      PMScraperChecklist.bindForm(runForm, { keepPanelVisible: true });
+      var checklistEl = document.getElementById("liChecklist");
+      var skipPushTimer = null;
+      if (checklistEl) {
+        checklistEl.addEventListener("change", function (e) {
+          if (!e.target.classList.contains("li-checklist-cb")) return;
+          if (!currentTaskId) return;
+          clearTimeout(skipPushTimer);
+          skipPushTimer = setTimeout(function () {
+            var skip = PMScraperChecklist.getSkipSearches(checklistEl);
+            api(base + "api/task/skip-searches/", {
+              method: "POST",
+              json: { task_id: currentTaskId, skip_searches: skip },
+            }).then(function (data) {
+              if (data.search_checklist) renderChecklist(data.search_checklist, true);
+            }).catch(function () {});
+          }, 250);
+        });
+      }
+    }
     if (features.output) initOutput(base);
     if (features.logs) initLogs(base);
     if (features.dashboard) initDashboard(base);
@@ -519,6 +775,8 @@
     function start() {
       var form = document.getElementById("liScraperForm");
       var config = formConfig(form, taskType);
+      saveRunFormDraft(form, taskType);
+      renderChecklist(null, false);
       setLog("Starting…");
       api(base + "api/task/start/", {
         method: "POST",
@@ -526,6 +784,7 @@
       })
         .then(function (data) {
           currentTaskId = data.task_id;
+          renderChecklist(null, true);
           toast(data.message || "Started");
           toggleControls("running");
           poll();

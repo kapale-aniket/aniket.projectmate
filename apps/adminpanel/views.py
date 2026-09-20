@@ -57,6 +57,8 @@ from apps.core.exports import export_queryset_xlsx, export_simple_pdf
 from apps.core.models import SiteSettings
 from django.contrib.auth import update_session_auth_hash
 
+ADMIN_REMEMBER_ME_DAYS = 15
+
 
 class AdminLoginView(LoginView):
     template_name = "adminpanel/login.html"
@@ -83,10 +85,16 @@ class AdminLoginView(LoginView):
             messages.error(self.request, "You do not have admin access.")
             return self.render_to_response(self.get_context_data(form=form))
 
-        # Browser session only — ends on logout / browser close (no “keep me signed in”)
+        # Default: browser session only. Optional: stay signed in for 15 days.
+        remember = form.cleaned_data.get("remember_me")
         response = super().form_valid(form)
-        self.request.session.set_expiry(0)
-        self.request.session.pop("admin_remember_me", None)
+        if remember:
+            self.request.session.set_expiry(timedelta(days=ADMIN_REMEMBER_ME_DAYS))
+            self.request.session["admin_remember_me"] = True
+        else:
+            self.request.session.set_expiry(0)
+            self.request.session.pop("admin_remember_me", None)
+        self.request.session.modified = True
         if self.request.session.pop("admin_temp_password_sent", None):
             messages.info(
                 self.request,

@@ -12,6 +12,8 @@ __all__ = [
     "visible_columns",
     "column_headers",
     "column_keys",
+    "all_column_headers",
+    "all_column_keys",
 ]
 
 
@@ -50,3 +52,11 @@ def column_headers(fmt):
 
 def column_keys(fmt):
     return [col["key"] for col in visible_columns(fmt)]
+
+
+def all_column_headers(fmt):
+    return [col["header"] for col in fmt.get("columns") or []]
+
+
+def all_column_keys(fmt):
+    return [col["key"] for col in fmt.get("columns") or []]

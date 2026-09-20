@@ -255,19 +255,193 @@ def is_fresher_friendly_experience(text, experience_raw=""):
 
 
 def should_skip_for_fresher_filter(description_text="", job_title="", experience_raw=""):
-    """Return (skip, reason) for fresher-only scraping."""
-    description_text = description_text or ""
+    """Return (skip, reason) for fresher-only scraping.
 
-    if has_senior_level_words(description_text):
-        return True, "senior-level words in job description"
+    Senior roles are blocked by title (and explicit senior titles in experience line).
+    Full description is NOT scanned for the word 'senior' (too many false positives
+    like 'report to a senior engineer').
+    """
+    description_text = description_text or ""
+    job_title = job_title or ""
+
+    if has_senior_level_words(job_title):
+        return True, "senior-level title"
+
+    if experience_raw and has_senior_level_words(experience_raw):
+        return True, "senior-level experience line"
 
     if not description_mentions_experience(description_text, experience_raw):
+        # No explicit years → keep (often fresher/unspecified).
         return False, ""
 
     if is_fresher_friendly_experience(description_text, experience_raw):
         return False, ""
 
     return True, "experience not fresher-friendly (allowed: fresher / 0 / 0-1 / 0-2 years)"
+
+
+KEYWORD_STOPWORDS = {
+    "a",
+    "an",
+    "and",
+    "at",
+    "entry",
+    "for",
+    "fresher",
+    "freshers",
+    "graduate",
+    "graduates",
+    "in",
+    "intern",
+    "internship",
+    "job",
+    "jobs",
+    "junior",
+    "level",
+    "of",
+    "or",
+    "role",
+    "roles",
+    "the",
+    "to",
+    "with",
+}
+
+# Generic role words — alone they match too many unrelated jobs (Java, ServiceNow…).
+ROLE_WORDS = {
+    "associate",
+    "consultant",
+    "developer",
+    "engineer",
+    "programmer",
+    "analyst",
+    "specialist",
+}
+
+# max = keep more jobs, but still require skill terms when present (e.g. python)
+# balanced = all terms in title/card
+# strict = all terms in title only
+KEYWORD_MATCH_MODE = "max"
+
+
+def keyword_match_terms(keyword):
+    """Significant tokens from a search keyword (drops fresher/junior filler words)."""
+    tokens = re.findall(r"[a-z0-9+#.\-]+", (keyword or "").lower())
+    return [t for t in tokens if t not in KEYWORD_STOPWORDS and len(t) > 1]
+
+
+def _card_title_hint(card_text):
+    """Use the first meaningful card lines as the job title hint."""
+    lines = []
+    for raw in (card_text or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        lower = line.lower()
+        # Skip LinkedIn chrome / meta lines.
+        if lower in {"promoted", "viewed", "easy apply", "actively reviewing applicants"}:
+            continue
+        if lower.startswith("be an early applicant"):
+            continue
+        if re.fullmatch(r"\d+\s*(second|minute|hour|day|week|month)s?\s*ago", lower):
+            continue
+        lines.append(line)
+        if len(lines) >= 2:
+            break
+    return " ".join(lines)
+
+
+def job_matches_search_keyword(
+    keyword,
+    title="",
+    card_text="",
+    description="",
+    strict_title=False,
+    match_mode=None,
+):
+    """
+    Return whether a job is related enough to the search keyword.
+
+    Modes:
+      - max: require skill terms when present (python/java/…); role words alone are not enough
+      - balanced: all significant terms in title or card text
+      - strict: all significant terms in title (or card title lines)
+    """
+    mode = (match_mode or KEYWORD_MATCH_MODE or "max").lower()
+    if strict_title and mode != "max":
+        mode = "strict"
+
+    terms = keyword_match_terms(keyword)
+    if not terms:
+        return True, ""
+
+    title_l = (title or "").lower().strip()
+    card_title_l = _card_title_hint(card_text).lower()
+    card_l = (card_text or "").lower()
+    desc_l = (description or "").lower()[:5000]
+    primary = title_l or card_title_l
+    haystack = f"{title_l} {card_title_l} {card_l} {desc_l}".strip()
+
+    if mode == "max":
+        skill_terms = [t for t in terms if t not in ROLE_WORDS]
+        role_terms = [t for t in terms if t in ROLE_WORDS]
+        if skill_terms:
+            # "python developer" → must mention python (not just any developer job).
+            if not any(t in haystack for t in skill_terms):
+                return False, f"does not match keyword '{keyword}'"
+            return True, ""
+        if any(t in haystack for t in (role_terms or terms)):
+            return True, ""
+        return False, f"does not match keyword '{keyword}'"
+
+    if mode == "balanced":
+        pool = f"{primary} {card_l}".strip()
+        missing = [t for t in terms if t not in pool]
+        if not missing:
+            return True, ""
+        # Allow one missing term from description.
+        if len(missing) == 1 and missing[0] in desc_l:
+            return True, ""
+        return False, f"does not match keyword '{keyword}'"
+
+    # strict
+    if not primary:
+        return False, f"does not match keyword '{keyword}'"
+    missing = [t for t in terms if t not in primary]
+    if not missing:
+        return True, ""
+    return False, f"does not match keyword '{keyword}'"
+
+
+def should_skip_for_keyword_mismatch(
+    keyword,
+    job_title="",
+    card_text="",
+    description_text="",
+    experience_raw="",
+    strict_title=False,
+    match_mode=None,
+    allow_experience_bypass=True,
+):
+    """
+    Return (skip, reason).
+
+    When allow_experience_bypass is True, keyword mismatch never skips here — the
+    fresher/experience filter (should_skip_for_fresher_filter) decides keep/skip.
+    """
+    ok, reason = job_matches_search_keyword(
+        keyword,
+        title=job_title,
+        card_text=card_text,
+        description=description_text,
+        strict_title=strict_title,
+        match_mode=match_mode,
+    )
+    if ok:
+        return False, ""
+    if allow_experience_bypass:
+        return False, "keyword optional (experience filter applies)"
+    return True, reason
 
 
 def normalize_experience_required(text):

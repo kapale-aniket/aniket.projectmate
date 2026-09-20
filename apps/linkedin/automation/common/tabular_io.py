@@ -24,7 +24,11 @@ def find_xlsx_header_row(all_rows):
             "Apply Link" in cells
             or "Job Role" in cells
             or "apply_link" in cells
+            or "Job Title" in cells
+            or "Apply" in cells
         ):
+            return idx, cells
+        if "#" in cells and "Job Title" in cells:
             return idx, cells
     if all_rows:
         return 0, [normalize_header_key(c) for c in all_rows[0]]

@@ -1,12 +1,36 @@
 """Ensure job scraper output files exist after runs, stops, and crashes."""
 
 import os
-from datetime import date
+import re
+from datetime import date, datetime
 from pathlib import Path
 
 from django.conf import settings
 
 from apps.linkedin.services.automation_path import ensure_automation_path
+
+DAILY_XLSX_PATTERN = re.compile(r"^aniket_projectmate_\d{4}-\d{2}-\d{2}\.xlsx$")
+STAMPED_XLSX_PATTERN = re.compile(r"_\d{8}_\d{6}\.xlsx$")
+
+HEADER_TO_JOB_KEY = {
+    "Job Title": "job_role",
+    "Job Role": "job_role",
+    "Company": "company_name",
+    "Company Name": "company_name",
+    "Company Size": "company_size",
+    "Employee Size": "company_size",
+    "Experience": "experience_required",
+    "Experience Required": "experience_required",
+    "Skills": "skills_required",
+    "Skills Required": "skills_required",
+    "Location": "location",
+    "Salary (LPA)": "package_lpa",
+    "Package (LPA)": "package_lpa",
+    "Posted": "posted_text",
+    "Apply Link": "apply_link",
+    "Easy Apply": "easy_apply",
+    "Freshers Eligible": "freshers_eligible",
+}
 
 
 def stop_flag_path(task_id):
@@ -25,6 +49,110 @@ def clear_task_stop_flag(task_id):
         pass
 
 
+def _record_to_job(record):
+    job = {}
+    for header, key in HEADER_TO_JOB_KEY.items():
+        if header in record and record[header] not in (None, ""):
+            job[key] = record[header]
+    hrefs = record.get("_hrefs") or {}
+    apply_url = (
+        hrefs.get("Apply")
+        or hrefs.get("Apply Link")
+        or hrefs.get("Job Title")
+        or hrefs.get("Job Role")
+        or job.get("apply_link")
+        or ""
+    )
+    if apply_url:
+        job["apply_link"] = str(apply_url).strip()
+    return job if job.get("job_role") or job.get("apply_link") else None
+
+
+def _jobs_from_excel(path_str):
+    from apps.linkedin.services.stats import _read_xlsx_preview_records
+
+    _headers, records = _read_xlsx_preview_records(path_str, limit=10000)
+    jobs = []
+    for record in records:
+        job = _record_to_job(record)
+        if job:
+            jobs.append(job)
+    return jobs
+
+
+def _refresh_excel_from_jobs(jobs, excel_path):
+    from job.excel_writer import write_branded_excel
+
+    if not jobs:
+        return False
+    write_branded_excel(jobs, str(excel_path))
+    return True
+
+
+def refresh_all_job_output_excel(include_merged=True, include_orphan_xlsx=True):
+    """
+    Re-generate existing job Excel files from JSON backups (or re-read xlsx data)
+    using the current export layout and clickable Apply links.
+    """
+    ensure_automation_path()
+    from job.master_store import (
+        DAILY_JSON_PATTERN,
+        OUTPUT_DIR,
+        _read_jobs_from_json,
+        daily_excel_path,
+    )
+
+    output_dir = Path(OUTPUT_DIR)
+    refreshed = []
+    skipped = []
+    errors = []
+
+    for json_path in sorted(output_dir.glob("aniket_projectmate_*.json")):
+        match = DAILY_JSON_PATTERN.match(json_path.name)
+        if not match:
+            continue
+        day_str = match.group(1)
+        jobs = _read_jobs_from_json(str(json_path))
+        if not jobs:
+            skipped.append(str(json_path))
+            continue
+        excel_path = daily_excel_path(datetime.strptime(day_str, "%Y-%m-%d").date())
+        try:
+            if _refresh_excel_from_jobs(jobs, excel_path):
+                refreshed.append(str(excel_path))
+        except Exception as exc:
+            errors.append({"path": str(excel_path), "error": str(exc)})
+
+    if include_merged or include_orphan_xlsx:
+        for xlsx_path in sorted(output_dir.glob("*.xlsx")):
+            name = xlsx_path.name
+            if STAMPED_XLSX_PATTERN.search(name):
+                continue
+            if DAILY_XLSX_PATTERN.match(name):
+                continue
+            if name.startswith("merged_"):
+                if not include_merged:
+                    continue
+            elif not (include_orphan_xlsx and name.startswith("aniket_projectmate_")):
+                continue
+            try:
+                jobs = _jobs_from_excel(str(xlsx_path))
+                if _refresh_excel_from_jobs(jobs, xlsx_path):
+                    refreshed.append(str(xlsx_path))
+                else:
+                    skipped.append(str(xlsx_path))
+            except Exception as exc:
+                errors.append({"path": str(xlsx_path), "error": str(exc)})
+
+    return {
+        "ok": not errors,
+        "refreshed": refreshed,
+        "refreshed_count": len(refreshed),
+        "skipped": skipped,
+        "errors": errors,
+    }
+
+
 def finalize_job_output(day=None):
     """Create or refresh today's Excel from the daily JSON backup."""
     ensure_automation_path()
@@ -33,8 +161,14 @@ def finalize_job_output(day=None):
         daily_json_path,
         ensure_daily_excel,
         load_today_store,
+        purge_old_files,
     )
     from job.excel_writer import write_branded_excel
+
+    try:
+        purge_old_files()
+    except Exception:
+        pass
 
     target_day = day or date.today()
     store = load_today_store(target_day)

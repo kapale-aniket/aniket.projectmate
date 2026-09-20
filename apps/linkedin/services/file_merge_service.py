@@ -44,11 +44,14 @@ def _automation_root():
 
 
 def _validate_paths(paths):
-    root = _automation_root().resolve()
+    allowed_roots = [
+        Path(settings.LINKEDIN_AUTOMATION_ROOT).resolve(),
+        Path(settings.NAUKRI_AUTOMATION_ROOT).resolve(),
+    ]
     validated = []
     for path_str in paths:
         path = Path(path_str).resolve()
-        if not str(path).startswith(str(root)) or not path.exists():
+        if not any(str(path).startswith(str(root)) for root in allowed_roots) or not path.exists():
             raise ValueError(f"Invalid or missing file: {path.name}")
         if path.suffix.lower() not in {".json", ".csv", ".xlsx"}:
             raise ValueError(f"Unsupported file type: {path.name}")
@@ -174,6 +177,8 @@ def _write_xlsx(path, headers, rows):
     from openpyxl import Workbook
     from openpyxl.styles import Font
 
+    from apps.linkedin.services.excel_io import atomic_workbook_save
+
     wb = Workbook()
     ws = wb.active
     ws.title = "Merged Data"
@@ -182,7 +187,7 @@ def _write_xlsx(path, headers, rows):
         cell.font = Font(bold=True)
     for row in rows:
         ws.append(_row_to_values(row, headers))
-    wb.save(path)
+    atomic_workbook_save(wb, path)
 
 
 def preview_merge(paths, limit=100):

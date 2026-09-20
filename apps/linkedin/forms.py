@@ -32,6 +32,13 @@ class JobScraperForm(forms.Form):
         required=False, initial=True, label="Resume from checkpoint",
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
+    skip_previous_jobs = forms.BooleanField(
+        required=False,
+        initial=False,
+        label="Skip previous jobs",
+        help_text="When checked, skip jobs already collected in earlier runs.",
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
+    )
     run_in_background = forms.BooleanField(
         required=False, initial=True,
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
@@ -67,6 +74,7 @@ class JobScraperForm(forms.Form):
             "max_job_age_hours": int(data.get("max_job_age_hours") or 24),
             "headless": True,
             "resume": data.get("resume", True),
+            "skip_previous_jobs": bool(data.get("skip_previous_jobs")),
         }
 
 
@@ -165,6 +173,12 @@ class SettingsForm(forms.Form):
     )
     job_min_delay = forms.FloatField(required=False, min_value=0.5, widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.1"}))
     job_max_delay = forms.FloatField(required=False, min_value=0.5, widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.1"}))
+
+    sheet_title = forms.CharField(required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+    whatsapp_group_url = forms.CharField(required=False, widget=forms.URLInput(attrs={"class": "form-control"}))
+    whatsapp_group_name = forms.CharField(required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
+    instagram_url = forms.CharField(required=False, widget=forms.URLInput(attrs={"class": "form-control"}))
+    instagram_handle = forms.CharField(required=False, widget=forms.TextInput(attrs={"class": "form-control"}))
 
     connection_keywords = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 4, "class": "form-control"}))
     connection_locations = forms.CharField(required=False, widget=forms.Textarea(attrs={"rows": 3, "class": "form-control"}))

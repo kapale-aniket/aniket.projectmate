@@ -1,7 +1,7 @@
 import csv
 import os
 
-from common.excel_format import column_headers, column_keys, load_excel_format
+from common.excel_format import all_column_headers, all_column_keys, load_excel_format
 from common.excel_table import record_row_values, write_formatted_workbook
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -12,12 +12,12 @@ EXCEL_PATH = os.path.join(OUTPUT_DIR, "new_connections.xlsx")
 
 def get_csv_columns():
     fmt = load_excel_format("connection")
-    return column_keys(fmt)
+    return all_column_keys(fmt)
 
 
 def get_csv_headers():
     fmt = load_excel_format("connection")
-    return column_headers(fmt)
+    return all_column_headers(fmt)
 
 
 def _read_profiles():

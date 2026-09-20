@@ -1,0 +1,35 @@
+{% extends "adminpanel/base.html" %}
+{% load static %}
+{% block page_title %}Naukri session{% endblock %}
+{% block extra_css %}
+<link href="{% static 'css/linkedin-admin.css' %}" rel="stylesheet">
+<link href="{% static 'css/naukri-admin.css' %}" rel="stylesheet">
+{% endblock %}
+{% block content %}
+{% include "adminpanel/naukri/_nav.html" %}
+{% csrf_token %}
+<div class="ap-card" data-api-base="{% url 'naukri:home' %}">
+  <h2 class="h6 mb-2">Save Naukri login session</h2>
+  <p class="small text-muted">
+    Opens a visible browser on Naukri login. Sign in manually; session cookies are saved for headless apply runs.
+  </p>
+  {% if session_ready %}
+  <div class="alert alert-success py-2 small">Session file exists. Re-run if login expires.</div>
+  {% else %}
+  <div class="alert alert-warning py-2 small">No session saved yet.</div>
+  {% endif %}
+  <button type="button" class="btn btn-ap" id="nkStartSession"><i class="fas fa-key me-1"></i> Save session</button>
+  <button type="button" class="btn btn-outline-danger ms-2" id="nkStopTask"><i class="fas fa-stop me-1"></i> Stop</button>
+  <div class="mt-3">
+    <span class="badge text-bg-secondary" id="nkStatusBadge">Idle</span>
+    <div class="small mt-2" id="nkTaskMeta">Ready</div>
+    <div id="nkLogs" class="li-logs small font-monospace mt-2" style="max-height:320px;overflow:auto;white-space:pre-wrap"></div>
+  </div>
+</div>
+<script src="{% static 'js/naukri-admin.js' %}"></script>
+<script>
+document.getElementById("nkStartSession")?.addEventListener("click", function () {
+  if (window.PMNaukri) window.PMNaukri.startSession();
+});
+</script>
+{% endblock %}

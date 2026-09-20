@@ -9,7 +9,52 @@ import os
 import sys
 
 
+def _configure_stdout_encoding():
+    """Avoid UnicodeEncodeError on Windows cp1252 consoles."""
+    if hasattr(sys.stdout, "reconfigure"):
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+    if hasattr(sys.stderr, "reconfigure"):
+        try:
+            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+        except Exception:
+            pass
+
+
+def _safe_write_print(original_print, *args, **kwargs):
+    try:
+        original_print(*args, **kwargs)
+        return
+    except UnicodeEncodeError:
+        pass
+    except RecursionError:
+        raise
+
+    file = kwargs.get("file", sys.stdout)
+    text = " ".join(str(arg) for arg in args)
+    end = kwargs.get("end", "\n")
+    try:
+        encoding = getattr(file, "encoding", None) or "utf-8"
+        safe = text.encode(encoding, errors="replace").decode(encoding, errors="replace")
+        original_print(safe, end=end, file=file, flush=kwargs.get("flush", False))
+        return
+    except Exception:
+        pass
+
+    try:
+        buffer = getattr(file, "buffer", None)
+        if buffer is not None:
+            buffer.write((text + end).encode("utf-8", errors="replace"))
+            if kwargs.get("flush"):
+                buffer.flush()
+    except Exception:
+        pass
+
+
 def install_automation_hooks(task):
+    _configure_stdout_encoding()
     os.environ["TERRA_TASK_ID"] = str(task.id)
     config = task.config or {}
 
@@ -25,11 +70,14 @@ def install_automation_hooks(task):
 
 
 def _patch_print(task_id):
+    if getattr(builtins.print, "__terra_tee_print__", False):
+        return
+
     original_print = builtins.print
 
     @functools.wraps(original_print)
     def tee_print(*args, **kwargs):
-        original_print(*args, **kwargs)
+        _safe_write_print(original_print, *args, **kwargs)
         try:
             message = " ".join(str(arg) for arg in args)
             if not message.strip():
@@ -43,6 +91,7 @@ def _patch_print(task_id):
         except Exception:
             pass
 
+    tee_print.__terra_tee_print__ = True
     builtins.print = tee_print
 
 
@@ -68,10 +117,14 @@ def _patch_browser_launch(task, headless=None):
 
         with original_launch(*args, **kwargs) as result:
             if is_scraper and len(result) >= 3:
-                from apps.linkedin.services.browser_preview import register_page
+                from apps.linkedin.services.browser_preview import register_page, unregister_page
 
                 register_page(result[2], task_id)
-            yield result
+            try:
+                yield result
+            finally:
+                if is_scraper:
+                    unregister_page()
 
     browser_module.launch_browser = patched_launch
 

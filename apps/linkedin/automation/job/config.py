@@ -1,10 +1,16 @@
 import os
 
-JOB_KEYWORDS = ['Python Developer Fresher', 'Django Developer Fresher']
-LOCATIONS = ['Pune', 'Bangalore']
+JOB_KEYWORDS = ['Djanago developer fresher', 'python developer fresher', 'java developer', 'data analytics fresher']
+LOCATIONS = ['bangalore', 'pune', 'navi mumbai', 'hyderabad']
 MAX_PAGES = 40
 MAX_JOBS = int(os.getenv("MAX_JOBS", "0"))
-MAX_JOB_AGE_HOURS = 2
+MAX_JOB_AGE_HOURS = 24
 SEARCH_MIN_DELAY = 1.0
 SEARCH_MAX_DELAY = 2.0
+SHEET_TITLE = 'aniket.projectmate daily jobs'
+WHATSAPP_GROUP_URL = 'https://chat.whatsapp.com/GV7XEmVREg9KrB1sr5dZwL'
+WHATSAPP_GROUP_NAME = 'Be Placement Ready'
+INSTAGRAM_URL = 'https://www.instagram.com/aniket.projectmate?igsh=MWtkbWs3bGE1N2Jtag=='
+INSTAGRAM_HANDLE = 'aniket.projectmate'
+SKIP_SEARCHES = []
 RESULTS_PER_PAGE = 25

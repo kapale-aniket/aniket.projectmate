@@ -29,7 +29,7 @@
       "key": "timestamp",
       "header": "Timestamp",
       "width": 20,
-      "visible": true
+      "visible": false
     },
     {
       "key": "name",
@@ -41,25 +41,25 @@
       "key": "headline",
       "header": "Headline",
       "width": 40,
-      "visible": true
+      "visible": false
     },
     {
       "key": "profile_url",
       "header": "Profile URL",
       "width": 50,
-      "visible": true
+      "visible": false
     },
     {
       "key": "keyword",
       "header": "Keyword",
       "width": 24,
-      "visible": true
+      "visible": false
     },
     {
       "key": "location",
       "header": "Location",
       "width": 18,
-      "visible": true
+      "visible": false
     },
     {
       "key": "connect_status",

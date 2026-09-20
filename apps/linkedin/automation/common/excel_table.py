@@ -1,9 +1,10 @@
 """Shared styled Excel table rendering from format config."""
 
+from openpyxl import Workbook
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
 from openpyxl.utils import get_column_letter
 
-from common.excel_format import visible_columns
+from common.excel_format import load_excel_format, visible_columns
 
 
 def _style_dict(fmt):
@@ -56,6 +57,77 @@ def render_title_row(ws, fmt, row=1):
     freeze = style.get("freeze_panes_row", 0)
     if freeze:
         ws.freeze_panes = f"A{freeze + 1}"
+
+
+def render_social_links_row(ws, fmt, row=2, social=None):
+    """WhatsApp + Instagram row under the sheet title (row 2)."""
+    social = social or {}
+    whatsapp_url = (social.get("whatsapp_url") or "").strip()
+    whatsapp_name = (social.get("whatsapp_name") or "WhatsApp").strip()
+    instagram_url = (social.get("instagram_url") or "").strip()
+    instagram_handle = (social.get("instagram_handle") or "Instagram").strip()
+    if not whatsapp_url and not instagram_url:
+        return row
+
+    cols = visible_columns(fmt)
+    col_count = len(cols) or 1
+    last_col = get_column_letter(col_count)
+    split = max(1, col_count // 2)
+    split_col = get_column_letter(split)
+    thin = Side(style="thin", color="D9D9D9")
+
+    if whatsapp_url and instagram_url:
+        ws.merge_cells(f"A{row}:{split_col}{row}")
+        ws.merge_cells(
+            start_row=row,
+            start_column=split + 1,
+            end_row=row,
+            end_column=col_count,
+        )
+    else:
+        ws.merge_cells(f"A{row}:{last_col}{row}")
+
+    if whatsapp_url:
+        wa = ws.cell(row=row, column=1, value=f"Join WhatsApp Group - {whatsapp_name}")
+        wa.hyperlink = whatsapp_url
+        wa.font = Font(bold=True, color="059669", underline="single", size=11)
+        wa.alignment = Alignment(horizontal="center", vertical="center")
+        wa_fill = pattern_fill("F0FDF4")
+        end_col = split if instagram_url else col_count
+        for col_idx in range(1, end_col + 1):
+            cell = ws.cell(row=row, column=col_idx)
+            cell.fill = wa_fill
+            cell.border = Border(
+                left=Side(style="medium", color="86EFAC") if col_idx == 1 else thin,
+                right=thin,
+                top=thin,
+                bottom=thin,
+            )
+
+    if instagram_url:
+        ig_col = split + 1 if whatsapp_url else 1
+        ig = ws.cell(
+            row=row,
+            column=ig_col,
+            value=f"Follow on Instagram - {instagram_handle}",
+        )
+        ig.hyperlink = instagram_url
+        ig.font = Font(bold=True, color="DB2777", underline="single", size=11)
+        ig.alignment = Alignment(horizontal="center", vertical="center")
+        ig_fill = pattern_fill("FDF2F8")
+        start_col = ig_col
+        for col_idx in range(start_col, col_count + 1):
+            cell = ws.cell(row=row, column=col_idx)
+            cell.fill = ig_fill
+            cell.border = Border(
+                left=thin,
+                right=Side(style="medium", color="F9A8D4") if col_idx == col_count else thin,
+                top=thin,
+                bottom=thin,
+            )
+
+    ws.row_dimensions[row].height = 34
+    return row + 1
 
 
 def render_header_row(ws, fmt, row):
@@ -167,6 +239,8 @@ def write_formatted_workbook(
     yes_key=None,
     header_row=3,
 ):
+    from apps.linkedin.services.excel_io import atomic_workbook_save
+
     fmt = fmt or load_excel_format(scraper_type)
 
     workbook = Workbook()
@@ -188,5 +262,5 @@ def write_formatted_workbook(
         yes_key=yes_key,
     )
 
-    workbook.save(path)
+    atomic_workbook_save(workbook, path)
     return len(rows)

@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     "apps.api.apps.ApiConfig",
     "apps.adminpanel.apps.AdminpanelConfig",
     "apps.linkedin.apps.LinkedinConfig",
+    "apps.naukri.apps.NaukriConfig",
 ]
 
 MIDDLEWARE = [
@@ -345,6 +346,8 @@ LOGGING = {
 (BASE_DIR / "logs").mkdir(exist_ok=True)
 INTERNAL_IPS = ["127.0.0.1"]
 
+# ProjectMateBot — offline knowledge base only (no paid API key)
+
 # LinkedIn automation (admin panel)
 LINKEDIN_AUTOMATION_ROOT = BASE_DIR / "apps" / "linkedin" / "automation"
 LINKEDIN_DATA_DIR = BASE_DIR / "data" / "linkedin"
@@ -352,3 +355,9 @@ LINKEDIN_DATA_DIR.mkdir(parents=True, exist_ok=True)
 (LINKEDIN_AUTOMATION_ROOT / "job" / "output").mkdir(parents=True, exist_ok=True)
 (LINKEDIN_AUTOMATION_ROOT / "connections" / "new_connection").mkdir(parents=True, exist_ok=True)
 (LINKEDIN_AUTOMATION_ROOT / "posts" / "output").mkdir(parents=True, exist_ok=True)
+
+# Naukri automation (admin panel)
+NAUKRI_AUTOMATION_ROOT = BASE_DIR / "apps" / "naukri" / "automation"
+NAUKRI_DATA_DIR = BASE_DIR / "data" / "naukri"
+NAUKRI_DATA_DIR.mkdir(parents=True, exist_ok=True)
+(NAUKRI_AUTOMATION_ROOT / "output").mkdir(parents=True, exist_ok=True)

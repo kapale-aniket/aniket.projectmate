@@ -11,6 +11,7 @@ admin.site.site_title = "Internal"
 urlpatterns = [
     path("admin/", include("apps.adminpanel.urls")),  # Custom admin panel
     path("admin/linkedin/", include("apps.linkedin.urls")),  # LinkedIn parsing (admin)
+    path("admin/naukri/", include("apps.naukri.urls")),  # Naukri parsing (admin)
     path("django-admin/", admin.site.urls),  # Default Django admin (internal)
     path("accounts/", include("apps.accounts.urls")),
     path("accounts/", include("allauth.urls")),

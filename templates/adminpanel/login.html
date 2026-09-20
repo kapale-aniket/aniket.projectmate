@@ -81,9 +81,14 @@
               {% for e in form.password.errors %}<div class="ap-login__error">{{ e }}</div>{% endfor %}
             </div>
 
-            <div class="ap-login__row ap-login__row--end">
+            <div class="ap-login__row">
+              <label class="ap-login__remember" for="{{ form.remember_me.id_for_label }}">
+                {{ form.remember_me }}
+                <span>Keep me remembered for 15 days</span>
+              </label>
               <a class="ap-login__forgot" href="{% url 'adminpanel:forgot_password' %}">Forgot password?</a>
             </div>
+            {% for e in form.remember_me.errors %}<div class="ap-login__error">{{ e }}</div>{% endfor %}
 
             <button class="ap-login__submit" type="submit">
               <span>Sign in to admin</span>

@@ -22,6 +22,7 @@ def daily_json_path(day=None):
 
 
 def daily_excel_path(day=None):
+    """Return today's single Excel path (overwrite on each finalize)."""
     day_str = _resolve_day(day).strftime("%Y-%m-%d")
     return os.path.join(OUTPUT_DIR, f"{FILE_PREFIX}_{day_str}.xlsx")
 
@@ -148,3 +149,57 @@ def ensure_daily_excel(today_store, day=None):
 
     write_branded_excel(today_store["jobs"], excel_path)
     return excel_path
+
+
+DEFAULT_RETENTION_HOURS = 48
+# Backward-compatible alias (2 days ≈ 48 hours).
+DEFAULT_RETENTION_DAYS = 2
+
+
+def purge_old_files(retention_hours=None, retention_days=None, day=None):
+    """Permanently remove job output files older than 48 hours (by mtime).
+
+    Deletes `FILE_PREFIX_YYYY-MM-DD` JSON/XLSX, numeric-suffixed Excel variants,
+    and merged_*.xlsx older than the retention window. Does not soft-delete/trash.
+    """
+    import time
+
+    if retention_hours is None:
+        if retention_days is not None:
+            retention_hours = float(retention_days) * 24.0
+        else:
+            retention_hours = float(DEFAULT_RETENTION_HOURS)
+
+    cutoff_ts = time.time() - (float(retention_hours) * 3600.0)
+    removed = []
+
+    patterns = [
+        os.path.join(OUTPUT_DIR, f"{FILE_PREFIX}_*.json"),
+        os.path.join(OUTPUT_DIR, f"{FILE_PREFIX}_*.xlsx"),
+        os.path.join(OUTPUT_DIR, "merged_*.xlsx"),
+        os.path.join(OUTPUT_DIR, "merged_*.csv"),
+    ]
+    for pattern in patterns:
+        for path in glob.glob(pattern):
+            basename = os.path.basename(path)
+            if basename in {f"{FILE_PREFIX}_master.json", "scrape_state.json"}:
+                continue
+            try:
+                mtime = os.path.getmtime(path)
+            except OSError:
+                continue
+            if mtime > cutoff_ts:
+                continue
+            try:
+                os.remove(path)
+                removed.append(basename)
+            except OSError:
+                pass
+
+    if removed:
+        print(
+            f"Purged {len(removed)} job output file(s) older than "
+            f"{int(retention_hours)}h: {', '.join(removed[:8])}"
+            + ("..." if len(removed) > 8 else "")
+        )
+    return removed

@@ -33,6 +33,7 @@
       <div class="col-md-3"><label class="form-label">Min delay</label>{{ settings_form.job_min_delay }}</div>
       <div class="col-md-3"><label class="form-label">Max delay</label>{{ settings_form.job_max_delay }}</div>
     </div>
+    {% include "adminpanel/linkedin/_job_social_settings.html" %}
     {% include "adminpanel/linkedin/_excel_format_editor.html" with scraper_type="job" scraper_label="Job scraper" %}
     {% elif settings_tab == 'connection' %}
     <div class="mb-3"><label class="form-label">Default keywords</label>{{ settings_form.connection_keywords }}</div>

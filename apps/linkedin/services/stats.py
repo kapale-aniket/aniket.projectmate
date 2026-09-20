@@ -62,8 +62,10 @@ PREVIEW_COLUMN_ORDER = [
     "Profile URL",
     "job_role",
     "Job Role",
+    "Job Title",
     "company_name",
     "Company Name",
+    "Company",
     "location",
     "Location",
     "company_size",
@@ -82,6 +84,7 @@ PREVIEW_COLUMN_ORDER = [
     "Easy Apply",
     "apply_link",
     "Apply Link",
+    "Apply",
     "_source_file",
 ]
 
@@ -106,7 +109,12 @@ def _normalize_header_key(header):
 
 def filter_preview_columns(headers):
     """Drop serial-number columns from table preview (still kept in downloaded files)."""
-    return [h for h in headers if _normalize_header_key(h) not in PREVIEW_HIDDEN_HEADER_KEYS]
+    return [
+        h
+        for h in headers
+        if str(h).strip() != "#"
+        and _normalize_header_key(h) not in PREVIEW_HIDDEN_HEADER_KEYS
+    ]
 
 
 def _order_preview_headers(headers):
@@ -136,15 +144,154 @@ def _is_url(value):
     return text.startswith("http://") or text.startswith("https://")
 
 
+def _is_apply_header(header):
+    return _normalize_header_key(header) in {"applylink", "apply"}
+
+
+def _is_job_title_header(header):
+    return _normalize_header_key(header) in {"jobrole", "jobtitle", "jobname"}
+
+
+def _apply_url_from_record(record):
+    hrefs = record.get("_hrefs") or {}
+    for key, val in record.items():
+        if key == "_hrefs":
+            continue
+        if _is_apply_header(key):
+            override = hrefs.get(key)
+            if override and _is_url(override):
+                return str(override).strip()
+            text = str(val or "").strip()
+            if _is_url(text):
+                return text
+    for header, url in hrefs.items():
+        if _is_apply_header(header) and _is_url(url):
+            return str(url).strip()
+    return ""
+
+
 def _link_label(header, value):
-    if header in {"apply_link", "Apply Link"}:
-        return "Apply"
+    if _is_apply_header(header):
+        return "Apply Now"
     if header in {"profile_url", "Profile URL"}:
         return "View profile"
     text = str(value or "").strip()
     if len(text) > 48:
         return text[:45] + "..."
     return text or "Open link"
+
+
+def _preview_cell(header, record):
+    raw = record.get(header, "")
+    display = _format_preview_cell(header, raw)
+    hrefs = record.get("_hrefs") or {}
+    href = str(hrefs.get(header) or "").strip()
+
+    if not href:
+        if _is_apply_header(header):
+            href = _apply_url_from_record(record)
+        elif _is_job_title_header(header):
+            href = _apply_url_from_record(record)
+        elif _is_url(display):
+            href = display
+
+    is_link = _is_url(href)
+    if is_link:
+        if _is_job_title_header(header):
+            label = display or "View job"
+        else:
+            label = _link_label(header, display or href)
+        return {
+            "header": header,
+            "value": display,
+            "is_link": True,
+            "link_href": href,
+            "link_label": label,
+        }
+
+    return {
+        "header": header,
+        "value": display or "—",
+        "is_link": False,
+        "link_href": "",
+        "link_label": "",
+    }
+
+
+def _build_preview_payload(headers, records, limit=500):
+    headers = _order_preview_headers(headers)
+    records = records[:limit]
+    rows_zipped = []
+    rows = []
+    for record in records:
+        row_cells = []
+        row_simple = []
+        for header in headers:
+            cell = _preview_cell(header, record)
+            row_cells.append(cell)
+            row_simple.append(cell["value"])
+        rows_zipped.append(row_cells)
+        rows.append(row_simple)
+    return {"headers": headers, "rows": rows, "rows_zipped": rows_zipped, "records": records}
+
+
+def apply_preview_view_filters(
+    preview,
+    preview_search="",
+    preview_sort="",
+    preview_order="asc",
+    preview_page="1",
+):
+    """Filter, sort, and paginate preview records while keeping hyperlinks."""
+    from apps.linkedin.services.filter_utils import PREVIEW_PAGE_SIZE
+
+    if not preview or preview.get("error"):
+        return preview
+
+    headers = list(preview.get("headers") or [])
+    records = list(preview.get("records") or [])
+
+    if preview_search:
+        q = preview_search.lower()
+        records = [
+            r
+            for r in records
+            if q
+            in " ".join(str(v) for k, v in r.items() if k != "_hrefs").lower()
+        ]
+
+    if preview_sort and preview_sort in headers:
+        reverse = preview_order == "desc"
+        records = sorted(
+            records,
+            key=lambda r: str(r.get(preview_sort, "")).lower(),
+            reverse=reverse,
+        )
+
+    page = max(1, int(preview_page or 1))
+    per_page = PREVIEW_PAGE_SIZE
+    total = len(records)
+    total_pages = max(1, (total + per_page - 1) // per_page)
+    page = min(page, total_pages)
+    start = (page - 1) * per_page
+    page_records = records[start : start + per_page]
+
+    pagination = {
+        "page": page,
+        "per_page": per_page,
+        "total_rows": total,
+        "total_pages": total_pages,
+        "start": start + 1 if total else 0,
+        "end": min(start + per_page, total),
+        "has_prev": page > 1,
+        "has_next": page < total_pages,
+        "previous_page": max(1, page - 1),
+        "next_page": page + 1,
+    }
+
+    built = _build_preview_payload(headers, page_records)
+    built.pop("records", None)
+    return {**preview, **built, "pagination": pagination}
 
 
 def _find_xlsx_header_row(all_rows):
@@ -154,30 +301,87 @@ def _find_xlsx_header_row(all_rows):
     return find_xlsx_header_row(all_rows)
 
 
-def _rows_from_dicts(headers, records, limit=500):
-    body = []
+def _hyperlink_target(cell):
+    link = cell.hyperlink
+    if not link:
+        return ""
+    target = getattr(link, "target", None)
+    if target:
+        return str(target).strip()
+    return str(link).strip()
+
+
+def _read_xlsx_preview_records(path, limit=500):
+    from openpyxl import load_workbook
+
+    wb = load_workbook(path, read_only=False, data_only=True)
+    ws = wb.active
+    all_values = []
+    all_hrefs = []
+    for row in ws.iter_rows(min_row=1, max_row=ws.max_row):
+        vals = []
+        hrefs = {}
+        for col_idx, cell in enumerate(row):
+            vals.append(cell.value)
+            target = _hyperlink_target(cell)
+            if target:
+                hrefs[col_idx] = target
+        all_values.append(vals)
+        all_hrefs.append(hrefs)
+    wb.close()
+
+    header_idx, raw_headers = _find_xlsx_header_row(all_values)
+    headers = _order_preview_headers([h for h in raw_headers if h])
+    records = []
+    for row_vals, href_by_col in zip(
+        all_values[header_idx + 1 :], all_hrefs[header_idx + 1 :]
+    ):
+        if not row_vals or all(c is None or str(c).strip() == "" for c in row_vals):
+            continue
+        record = {}
+        hrefs = {}
+        for i, header in enumerate(raw_headers):
+            if not header:
+                continue
+            value = row_vals[i] if i < len(row_vals) else ""
+            record[header] = "" if value is None else value
+            if i in href_by_col:
+                hrefs[header] = href_by_col[i]
+        if any(str(v).strip() for v in record.values()):
+            if hrefs:
+                record["_hrefs"] = hrefs
+            records.append(record)
+            if len(records) >= limit:
+                break
+    return headers, records
+
+
+def _records_from_dicts(headers, records, limit=500):
+    ordered_headers = _order_preview_headers(headers)
+    normalized = []
     for record in records[:limit]:
-        body.append([_format_preview_cell(h, record.get(h, "")) for h in headers])
-    return body
+        row = {header: record.get(header, "") for header in ordered_headers}
+        normalized.append(row)
+    return ordered_headers, normalized
 
 
 def attach_preview_rows_zipped(preview):
     if not preview or preview.get("error"):
         return preview
+    if preview.get("rows_zipped"):
+        return preview
+    records = preview.get("records")
+    if records is not None:
+        built = _build_preview_payload(preview.get("headers") or [], records)
+        preview.update(built)
+        return preview
     headers = preview.get("headers") or []
     rows = preview.get("rows") or []
-    preview["rows_zipped"] = [
-        [
-            {
-                "header": header,
-                "value": cell,
-                "is_link": _is_url(cell),
-                "link_label": _link_label(header, cell),
-            }
-            for header, cell in zip(headers, row)
-        ]
-        for row in rows
+    record_rows = [
+        {header: cell for header, cell in zip(headers, row)} for row in rows
     ]
+    built = _build_preview_payload(headers, record_rows)
+    preview.update(built)
     return preview
 
 
@@ -248,44 +452,80 @@ def dashboard_stats():
 
 def get_latest_job_output_file():
     """Most recent daily job Excel output (aniket_projectmate_*.xlsx)."""
-    output_dir = _automation_root() / "job" / "output"
-    if not output_dir.is_dir():
+    recent = list_recent_job_output_files(limit=1)
+    return recent[0] if recent else None
+
+
+def list_recent_job_output_files(limit=8):
+    """Recent job Excel outputs for quick links on the scraper page."""
+    files = [
+        f
+        for f in list_output_files()
+        if f.get("type") == "Job Data" and str(f.get("name", "")).lower().endswith(".xlsx")
+    ]
+    return files[:limit]
+
+
+def resolve_output_file_path(path_str):
+    """Resolve relative or absolute output path to an absolute file under automation root."""
+    if not path_str or ".." in path_str:
         return None
-    candidates = sorted(
-        output_dir.glob("aniket_projectmate_*.xlsx"),
-        key=lambda path: path.stat().st_mtime,
-        reverse=True,
-    )
-    for path in candidates:
-        try:
-            stat = path.stat()
-            return {
-                "name": path.name,
-                "path": str(path),
-                "rel_path": str(path.relative_to(_automation_root())).replace("\\", "/"),
-                "type": "Job Data",
-                "date": datetime.fromtimestamp(stat.st_mtime).strftime("%b %d, %Y"),
-                "mtime": stat.st_mtime,
-                "records": _estimate_records(path),
-                "size_kb": round(stat.st_size / 1024, 1),
-            }
-        except OSError:
-            continue
+    root = _automation_root().resolve()
+    normalized = str(path_str).strip().replace("\\", "/")
+    candidate = Path(path_str)
+    if candidate.is_absolute():
+        target = candidate.resolve()
+    else:
+        target = (root / normalized).resolve()
+    if str(target).startswith(str(root)) and target.is_file():
+        return str(target)
+    for item in list_output_files():
+        item_rel = str(item.get("rel_path", "")).replace("\\", "/")
+        if item_rel == normalized or item.get("path") == path_str:
+            return item["path"]
     return None
+
+
+def output_file_key(path_str):
+    """Return rel_path for URLs when possible."""
+    resolved = resolve_output_file_path(path_str)
+    if not resolved:
+        return path_str or ""
+    root = _automation_root().resolve()
+    try:
+        return str(Path(resolved).relative_to(root)).replace("\\", "/")
+    except ValueError:
+        return resolved
 
 
 def list_output_files():
     files = []
     root = _automation_root()
 
+    # Auto-purge job outputs older than 48 hours whenever Output is listed.
+    try:
+        from apps.linkedin.services.automation_path import ensure_automation_path
+
+        ensure_automation_path()
+        from job.master_store import purge_old_files
+
+        purge_old_files(retention_hours=48)
+    except Exception:
+        pass
+
+    # Connection runs no longer produce Output files — remove leftovers.
+    conn_dir = root / "connections" / "new_connection"
+    if conn_dir.exists():
+        for leftover in list(conn_dir.glob("*.xlsx")) + list(conn_dir.glob("*.csv")):
+            try:
+                leftover.unlink()
+            except OSError:
+                pass
+
     patterns = [
         (root / "job" / "output", "aniket_projectmate_*.xlsx", "Job Data"),
-        (root / "job" / "output", "aniket_projectmate_*.json", "Job Data"),
         (root / "job" / "output", "merged_*.xlsx", "Job Data (Merged)"),
         (root / "posts" / "output", "hiring_posts_*.xlsx", "Posts"),
-        (root / "connections" / "new_connection", "*.csv", "Connections"),
-        (root / "connections" / "new_connection", "*.xlsx", "Connections"),
-        (root / "job" / "output", "merged_*.json", "Job Data (Merged)"),
         (root / "job" / "output", "merged_*.csv", "Job Data (Merged)"),
     ]
 
@@ -342,9 +582,10 @@ def _estimate_records(path):
 
 
 def preview_file(path_str, limit=500):
-    path = Path(path_str)
-    if not path.exists():
+    resolved = resolve_output_file_path(path_str)
+    if not resolved:
         return {"headers": [], "rows": [], "error": "File not found"}
+    path = Path(resolved)
 
     if path.suffix == ".json":
         try:
@@ -355,14 +596,14 @@ def preview_file(path_str, limit=500):
                 headers = _order_preview_headers(
                     data.get("columns") or (list(rows[0].keys()) if rows else [])
                 )
-                body = _rows_from_dicts(headers, rows, limit)
-                return attach_preview_rows_zipped({"headers": headers, "rows": body})
+                headers, records = _records_from_dicts(headers, rows, limit)
+                return _build_preview_payload(headers, records)
             jobs = _jobs_from_json_data(data)
             if not jobs:
-                return attach_preview_rows_zipped({"headers": [], "rows": []})
+                return _build_preview_payload([], [])
             headers = _order_preview_headers(list(jobs[0].keys()))
-            body = _rows_from_dicts(headers, jobs, limit)
-            return attach_preview_rows_zipped({"headers": headers, "rows": body})
+            headers, records = _records_from_dicts(headers, jobs, limit)
+            return _build_preview_payload(headers, records)
         except (OSError, json.JSONDecodeError) as exc:
             return {"headers": [], "rows": [], "error": _preview_error(exc, path)}
 
@@ -372,35 +613,15 @@ def preview_file(path_str, limit=500):
                 reader = csv.DictReader(handle)
                 headers = _order_preview_headers(list(reader.fieldnames or []))
                 records = list(reader)
-            body = _rows_from_dicts(headers, records, limit)
-            return attach_preview_rows_zipped({"headers": headers, "rows": body})
+            headers, records = _records_from_dicts(headers, records, limit)
+            return _build_preview_payload(headers, records)
         except OSError as exc:
             return {"headers": [], "rows": [], "error": _preview_error(exc, path)}
 
     if path.suffix == ".xlsx":
         try:
-            from openpyxl import load_workbook
-
-            wb = load_workbook(path, read_only=True, data_only=True)
-            ws = wb.active
-            all_rows = [list(row) for row in ws.iter_rows(values_only=True)]
-            wb.close()
-            header_idx, raw_headers = _find_xlsx_header_row(all_rows)
-            headers = _order_preview_headers([h for h in raw_headers if h])
-            records = []
-            for row in all_rows[header_idx + 1 : header_idx + 1 + limit]:
-                if not row or all(c is None or str(c).strip() == "" for c in row):
-                    continue
-                record = {}
-                for i, header in enumerate(raw_headers):
-                    if not header:
-                        continue
-                    value = row[i] if i < len(row) else ""
-                    record[header] = "" if value is None else value
-                if any(str(v).strip() for v in record.values()):
-                    records.append(record)
-            body = _rows_from_dicts(headers, records, limit)
-            return attach_preview_rows_zipped({"headers": headers, "rows": body})
+            headers, records = _read_xlsx_preview_records(path, limit)
+            return _build_preview_payload(headers, records)
         except Exception as exc:
             return {"headers": [], "rows": [], "error": _preview_error(exc, path)}
 

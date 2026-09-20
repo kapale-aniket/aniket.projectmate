@@ -34,6 +34,17 @@ class AdminLoginForm(AuthenticationForm):
             }
         ),
     )
+    remember_me = forms.BooleanField(
+        label="Keep me remembered for 15 days",
+        required=False,
+        initial=False,
+        widget=forms.CheckboxInput(
+            attrs={
+                "class": "form-check-input ap-login__check",
+                "autocomplete": "off",
+            }
+        ),
+    )
 
 
 class AdminForgotPasswordForm(forms.Form):

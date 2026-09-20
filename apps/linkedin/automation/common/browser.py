@@ -56,7 +56,16 @@ def launch_browser(
 
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=headless)
-        context = browser.new_context(storage_state=storage_state)
+        # Playwright accepts either a path to a storage file or a dict. If the
+        # provided path does not exist, pass an empty dict so Playwright won't
+        # attempt to open a missing file and raise FileNotFoundError.
+        storage_arg = storage_state
+        try:
+            if isinstance(storage_state, str) and not os.path.exists(storage_state):
+                storage_arg = {}
+        except Exception:
+            storage_arg = {}
+        context = browser.new_context(storage_state=storage_arg)
         if blocked_types or block_trackers:
             context.route("**/*", _make_route_handler(blocked_types, block_trackers))
         page = context.new_page()

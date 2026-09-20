@@ -1,6 +1,7 @@
 import re
 from urllib.parse import quote
 
+from common.geo_urns import DEFAULT_LOCATION_GEO_URNS, resolve_geo_urn
 from common.helpers import search_delay
 from connections.config import LOCATION_GEO_URNS
 
@@ -20,16 +21,51 @@ CONNECT_INVITE_LINK_SELECTOR = "main a[href*='/preload/search-custom-invite/']"
 
 
 def location_geo_urn(location):
-    if not location:
+    merged = dict(DEFAULT_LOCATION_GEO_URNS)
+    merged.update(LOCATION_GEO_URNS or {})
+    return resolve_geo_urn(location, merged)
+
+
+def _escape_locator_text(text):
+    return str(text or "").replace("'", "\\'")
+
+
+def _pick_location_option(page, location):
+    loc = (location or "").strip()
+    if not loc:
         return None
-    return LOCATION_GEO_URNS.get(location.strip().lower())
+
+    exact = page.locator(
+        f"[role='option']:has-text('{_escape_locator_text(loc)}'), "
+        f"div.basic-typeahead__selectable:has-text('{_escape_locator_text(loc)}')"
+    )
+    if exact.count() > 0:
+        return exact.first
+
+    loc_lower = loc.casefold()
+    options = page.locator("[role='option'], div.basic-typeahead__selectable")
+    count = options.count()
+    for idx in range(count):
+        option = options.nth(idx)
+        try:
+            label = (option.inner_text() or "").strip()
+        except Exception:
+            continue
+        if label.casefold() == loc_lower or loc_lower in label.casefold():
+            return option
+    return None
 
 
-def build_people_search_url(keyword, location="", page_num=1):
-    keyword = keyword.strip()
-    params = [f"keywords={quote(keyword)}", "origin=GLOBAL_SEARCH_HEADER"]
+def build_people_search_url(keyword, location="", page_num=1, *, include_location_in_keywords=False):
+    keyword = (keyword or "").strip()
+    if not keyword:
+        raise ValueError("Keyword is required for people search.")
+    search_text = keyword
+    if include_location_in_keywords and location:
+        search_text = f"{keyword} {location}".strip()
+    params = [f"keywords={quote(search_text)}", "origin=GLOBAL_SEARCH_HEADER"]
 
-    geo = location_geo_urn(location)
+    geo = None if include_location_in_keywords else location_geo_urn(location)
     if geo:
         params.append(f"geoUrn=%5B%22{geo}%22%5D")
 
@@ -46,7 +82,12 @@ def apply_location_filter_ui(page, location, logger, min_delay=1, max_delay=2):
     try:
         location_button = page.locator(
             "button.search-reusables__filter-pill-button:has-text('Locations'), "
-            "button:has-text('Locations')"
+            "button.search-reusables__filter-pill-button:has-text('Location'), "
+            "button:has-text('Locations'), "
+            "button:has-text('Location'), "
+            "button[aria-label*='Location' i], "
+            "button[aria-label*='location' i], "
+            "label:has-text('Locations')"
         )
         if location_button.count() == 0:
             logger.info(f"Location filter button not found for '{location}'.")
@@ -67,18 +108,16 @@ def apply_location_filter_ui(page, location, logger, min_delay=1, max_delay=2):
         location_input.first.fill(location)
         search_delay(page, min_delay, max_delay)
 
-        option = page.locator(
-            f"[role='option']:has-text('{location}'), "
-            f"div.basic-typeahead__selectable:has-text('{location}')"
-        )
-        if option.count() == 0:
-            option = page.locator("[role='option'], div.basic-typeahead__selectable").first
-
-        if option.count() == 0:
-            logger.info(f"No location suggestion found for '{location}'.")
+        option = _pick_location_option(page, location)
+        if option is None:
+            logger.info(f"No location suggestion matching '{location}'.")
+            try:
+                page.keyboard.press("Escape")
+            except Exception:
+                pass
             return False
 
-        option.first.click()
+        option.click()
         search_delay(page, min_delay, max_delay)
 
         for label in ("Show results", "Apply", "Done"):
@@ -120,7 +159,18 @@ def open_search(page, keyword, location, page_num, logger, min_delay=1, max_dela
     search_delay(page, min_delay, max_delay)
 
     if location and not geo_filter_used:
-        apply_location_filter_ui(page, location, logger, min_delay, max_delay)
+        if apply_location_filter_ui(page, location, logger, min_delay, max_delay):
+            wait_for_results(page)
+            return
+        logger.info(
+            f"Location UI filter unavailable for '{location}' — "
+            "retrying with location appended to keywords."
+        )
+        url, _ = build_people_search_url(
+            keyword, location, page_num, include_location_in_keywords=True
+        )
+        page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        search_delay(page, min_delay, max_delay)
 
     wait_for_results(page)
 

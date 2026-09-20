@@ -104,18 +104,20 @@ def normalize_profile_url(href):
 
 def profile_connection_state(card):
     try:
-        text = card.inner_text().lower()
+        if card.locator("button[aria-label*='Pending' i]").count() > 0:
+            return "pending"
+        card_text = card.inner_text().lower()
+        if re.search(r"\bpending\b", card_text):
+            return "pending"
     except Exception:
-        return "unknown"
-    if "pending" in text:
-        return "pending"
+        pass
     if card.locator(CONNECT_INVITE_LINK_SELECTOR).count() > 0:
         return "connect"
-    if card.locator("button[aria-label*='to connect']").count() > 0:
+    if card.locator("button[aria-label*='to connect' i]").count() > 0:
         return "connect"
-    if card.locator("button[aria-label*='Message']").count() > 0:
-        return "connected"
-    if "message" in text:
+    if card.locator("button").filter(has_text=re.compile(r"^\s*Connect\s*$", re.I)).count() > 0:
+        return "connect"
+    if card.locator("button[aria-label*='Message' i]").count() > 0:
         return "connected"
     return "unknown"
 
@@ -144,9 +146,33 @@ def load_saved_profile_urls():
 
 def ensure_profiles_csv():
     os.makedirs(OUTPUT_DIR, exist_ok=True)
+    expected_headers = get_csv_headers()
     if not os.path.exists(PROFILES_CSV):
         with open(PROFILES_CSV, "w", newline="", encoding="utf-8") as handle:
-            csv.writer(handle).writerow(get_csv_headers())
+            csv.writer(handle).writerow(expected_headers)
+        return
+
+    try:
+        with open(PROFILES_CSV, "r", encoding="utf-8", newline="") as handle:
+            reader = csv.reader(handle)
+            current_header = next(reader, None)
+    except (OSError, csv.Error):
+        current_header = None
+
+    if current_header != expected_headers:
+        existing_rows = []
+        try:
+            with open(PROFILES_CSV, "r", encoding="utf-8", newline="") as handle:
+                existing_rows = list(csv.DictReader(handle))
+        except (OSError, csv.Error):
+            existing_rows = []
+
+        columns = get_csv_columns()
+        with open(PROFILES_CSV, "w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=columns)
+            writer.writeheader()
+            for row in existing_rows:
+                writer.writerow({key: row.get(key, "") for key in columns})
 
 
 def scrape_profiles_to_csv(page, logger, keyword, location):

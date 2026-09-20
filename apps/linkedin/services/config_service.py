@@ -31,6 +31,11 @@ DEFAULT_SETTINGS = {
         "search_max_delay": 2,
         "headless": False,
         "auto_resume": True,
+        "sheet_title": "aniket.projectmate daily jobs",
+        "whatsapp_group_url": "https://chat.whatsapp.com/GV7XEmVREg9KrB1sr5dZwL",
+        "whatsapp_group_name": "Be Placement Ready",
+        "instagram_url": "https://www.instagram.com/aniket.projectmate?igsh=MWtkbWs3bGE1N2Jtag==",
+        "instagram_handle": "aniket.projectmate",
     },
     "connection": {
         "keywords": [
@@ -190,15 +195,22 @@ def sync_to_automation_configs(app_settings):
             "MAX_JOB_AGE_HOURS": job_cfg.get("max_job_age_hours", 24),
             "SEARCH_MIN_DELAY": job_cfg.get("search_min_delay", 1),
             "SEARCH_MAX_DELAY": job_cfg.get("search_max_delay", 2),
+            "SHEET_TITLE": job_cfg.get("sheet_title", "aniket.projectmate daily jobs"),
+            "WHATSAPP_GROUP_URL": job_cfg.get("whatsapp_group_url", ""),
+            "WHATSAPP_GROUP_NAME": job_cfg.get("whatsapp_group_name", ""),
+            "INSTAGRAM_URL": job_cfg.get("instagram_url", ""),
+            "INSTAGRAM_HANDLE": job_cfg.get("instagram_handle", "aniket.projectmate"),
+            "SKIP_SEARCHES": [],
         },
         extra_lines=["RESULTS_PER_PAGE = 25"],
     )
 
-    geo_urns = {
-        "pune": "102713980",
-        "bangalore": "105214831",
-        "bengaluru": "105214831",
-    }
+    from apps.linkedin.services.automation_path import ensure_automation_path
+
+    ensure_automation_path()
+    from common.geo_urns import DEFAULT_LOCATION_GEO_URNS
+
+    geo_urns = dict(DEFAULT_LOCATION_GEO_URNS)
     _write_python_config(
         root / "connections" / "config.py",
         {

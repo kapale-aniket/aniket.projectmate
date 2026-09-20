@@ -1,0 +1,6 @@
+{% load static %}
+<nav class="li-subnav mb-3">
+  <a href="{% url 'naukri:home' %}" class="{% if naukri_nav == 'home' %}active{% endif %}">Apply flow</a>
+  <a href="{% url 'naukri:session' %}" class="{% if naukri_nav == 'session' %}active{% endif %}">Session</a>
+  <a href="{% url 'naukri:output' %}" class="{% if naukri_nav == 'output' %}active{% endif %}">Output</a>
+</nav>

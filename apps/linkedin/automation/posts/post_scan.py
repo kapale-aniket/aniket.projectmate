@@ -45,6 +45,12 @@ def run():
         context,
         page,
     ):
+        try:
+            from posts.post_store import purge_old_files
+
+            purge_old_files(retention_days=4)
+        except Exception:
+            pass
         if not is_logged_in(page):
             print("\n*** LinkedIn session expired! ***")
             print("Run: python common/save_session.py")

@@ -19,7 +19,6 @@ from apps.linkedin.services.config_service import (
 )
 from apps.linkedin.services.file_errors import friendly_file_error
 from apps.linkedin.services.stats import (
-    attach_preview_rows_zipped,
     collect_logs,
     dashboard_stats,
     list_output_files,
@@ -33,6 +32,7 @@ from apps.linkedin.services.browser_preview import (
     screenshot_path,
     set_preview_enabled,
 )
+from apps.linkedin.services.settings_helpers import persist_run_config_to_settings
 from apps.linkedin.services.task_manager import (
     get_active_task,
     get_running_task,
@@ -125,7 +125,11 @@ def api_task_start(request):
         return JsonResponse({"ok": False, "errors": _form_errors(form), "message": "Invalid configuration"}, status=400)
 
     try:
-        task = start_task(task_type, config=form.cleaned_config(), run_in_background=True)
+        task_config = form.cleaned_config()
+        if task_type == ScraperTask.TASK_JOB:
+            task_config["skip_searches"] = config.get("skip_searches") or []
+        persist_run_config_to_settings(task_type, task_config)
+        task = start_task(task_type, config=task_config, run_in_background=True)
         return JsonResponse(
             {
                 "ok": True,
@@ -147,7 +151,8 @@ def _job_config_from_api(config):
         "max_job_age_hours": normalize_max_job_age_hours(config.get("max_job_age_hours", 24)),
         "headless": True,
         "resume": config.get("resume", True),
-        "run_in_background": True,
+        "skip_previous_jobs": bool(config.get("skip_previous_jobs")),
+        "skip_searches": config.get("skip_searches") or [],
     }
 
 
@@ -207,6 +212,44 @@ def api_task_control(request):
     return JsonResponse({"ok": False, "message": "Unknown action"}, status=400)
 
 
+@require_POST
+def api_task_skip_searches(request):
+    body = _json_body(request)
+    task_id = body.get("task_id")
+    skip_searches = body.get("skip_searches")
+    if task_id is None:
+        return JsonResponse({"ok": False, "message": "task_id is required"}, status=400)
+    if skip_searches is None or not isinstance(skip_searches, list):
+        return JsonResponse({"ok": False, "message": "skip_searches must be a list"}, status=400)
+
+    task = ScraperTask.objects.filter(pk=task_id).first()
+    if not task or task.task_type != ScraperTask.TASK_JOB:
+        return JsonResponse({"ok": False, "message": "Job task not found"}, status=404)
+    if task.status not in {
+        ScraperTask.STATUS_PENDING,
+        ScraperTask.STATUS_RUNNING,
+        ScraperTask.STATUS_PAUSED,
+    }:
+        return JsonResponse({"ok": False, "message": "Task is not active"}, status=409)
+
+    from apps.linkedin.services.progress_tracker import build_job_search_checklist
+    from apps.linkedin.services.search_skip_service import write_skip_searches
+
+    config = dict(task.config or {})
+    config["skip_searches"] = skip_searches
+    task.config = config
+    task.save(update_fields=["config"])
+    write_skip_searches(task.id, skip_searches)
+
+    return JsonResponse(
+        {
+            "ok": True,
+            "message": "Search queue updated",
+            "search_checklist": build_job_search_checklist(task),
+        }
+    )
+
+
 @require_GET
 def api_logs(request):
     search = request.GET.get("q", "")
@@ -257,7 +300,8 @@ def api_stats(request):
 
 @require_GET
 def api_files(request):
-    from apps.linkedin.services.filter_utils import filter_preview_rows, filter_sort_files, sort_preview_rows
+    from apps.linkedin.services.filter_utils import filter_sort_files
+    from apps.linkedin.services.stats import apply_preview_view_filters, preview_file
 
     files = list_output_files()
     search = request.GET.get("q", "")
@@ -274,11 +318,12 @@ def api_files(request):
     if selected:
         preview = preview_file(selected)
         if preview and not preview.get("error"):
-            headers, rows = filter_preview_rows(
-                preview.get("headers", []), preview.get("rows", []), preview_search
+            preview = apply_preview_view_filters(
+                preview,
+                preview_search=preview_search,
+                preview_sort=preview_sort,
+                preview_order=preview_order,
             )
-            rows = sort_preview_rows(headers, rows, preview_sort, preview_order)
-            preview = attach_preview_rows_zipped({**preview, "headers": headers, "rows": rows})
 
     return JsonResponse({"files": files, "preview": preview, "selected": selected})
 
@@ -327,13 +372,10 @@ def api_browser_preview(request):
     enabled = bool(body.get("enabled"))
     task = get_running_task() or get_active_task()
 
-    if enabled and not task:
-        return JsonResponse(
-            {"ok": False, "message": "Start a scraper first, then open Show Scraping."},
-            status=400,
-        )
-
-    if enabled and task.task_type == ScraperTask.TASK_SESSION:
+    # Allow enabling preview even when no scraper is currently running so the
+    # UI can show the waiting placeholder. Still block enabling for session
+    # login tasks which require a separate browser window.
+    if enabled and task and task.task_type == ScraperTask.TASK_SESSION:
         return JsonResponse(
             {"ok": False, "message": "Session login uses a separate browser window for sign-in."},
             status=400,
@@ -533,6 +575,7 @@ def _timesince(dt):
 api_task_status = _admin_api(api_task_status)
 api_task_start = _admin_api(api_task_start)
 api_task_control = _admin_api(api_task_control)
+api_task_skip_searches = _admin_api(api_task_skip_searches)
 api_logs = _admin_api(api_logs)
 api_stats = _admin_api(api_stats)
 api_files = _admin_api(api_files)

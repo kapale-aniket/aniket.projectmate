@@ -13,6 +13,7 @@ from common.excel_table import (
     render_experience_banner,
     render_header_row,
     render_section_banner,
+    render_social_links_row,
     render_title_row,
 )
 from job.job_filter import experience_bounds
@@ -26,6 +27,19 @@ SIZE_GROUPS = [
     ("200+ Employees", lambda n: n is not None and n > 200),
 ]
 OTHER_GROUP = "Other (Size Not Listed)"
+
+
+def _social_links_from_config():
+    try:
+        from job import config as cfg
+    except ImportError:
+        return {}
+    return {
+        "whatsapp_url": (getattr(cfg, "WHATSAPP_GROUP_URL", "") or "").strip(),
+        "whatsapp_name": (getattr(cfg, "WHATSAPP_GROUP_NAME", "") or "WhatsApp").strip(),
+        "instagram_url": (getattr(cfg, "INSTAGRAM_URL", "") or "").strip(),
+        "instagram_handle": (getattr(cfg, "INSTAGRAM_HANDLE", "") or "Instagram").strip(),
+    }
 
 
 def fresher_section(job):
@@ -100,7 +114,7 @@ def _render_table(ws, fmt, start_row, label, jobs):
         return row + 1
 
     row = render_header_row(ws, fmt, row)
-    rows = [record_row_values(idx, job, fmt) for idx, job in enumerate(jobs, start=1)]
+    rows = [record_row_values(idx, job, fmt) for idx, job in enumerate(jobs, start=0)]
     return render_data_rows(
         ws,
         fmt,
@@ -123,7 +137,7 @@ def _render_experience_section(ws, fmt, start_row, label, jobs):
 
     row = render_experience_banner(ws, fmt, start_row, label, f"{len(jobs)} jobs")
     row = render_header_row(ws, fmt, row)
-    rows = [record_row_values(idx, job, fmt) for idx, job in enumerate(jobs, start=1)]
+    rows = [record_row_values(idx, job, fmt) for idx, job in enumerate(jobs, start=0)]
     return render_data_rows(
         ws,
         fmt,
@@ -136,6 +150,8 @@ def _render_experience_section(ws, fmt, start_row, label, jobs):
 
 
 def write_branded_excel(jobs, file_path, fmt=None):
+    from apps.linkedin.services.excel_io import atomic_workbook_save
+
     fmt = fmt or load_excel_format("job")
     jobs = keep_eligible_companies(jobs)
     zero_year, one_year = split_by_experience(jobs)
@@ -146,10 +162,11 @@ def write_branded_excel(jobs, file_path, fmt=None):
 
     apply_column_widths(ws, fmt)
     render_title_row(ws, fmt, row=1)
+    next_row = render_social_links_row(ws, fmt, row=2, social=_social_links_from_config())
     apply_watermark(ws, fmt)
 
     layout = fmt.get("layout") or {}
-    row = 3
+    row = max(next_row, 3)
     if layout.get("group_by_experience", True):
         row = _render_experience_section(
             ws,
@@ -169,7 +186,7 @@ def write_branded_excel(jobs, file_path, fmt=None):
     else:
         all_jobs = zero_year + one_year
         row = render_header_row(ws, fmt, row)
-        rows = [record_row_values(idx, job, fmt) for idx, job in enumerate(all_jobs, start=1)]
+        rows = [record_row_values(idx, job, fmt) for idx, job in enumerate(all_jobs, start=0)]
         render_data_rows(
             ws,
             fmt,
@@ -180,5 +197,5 @@ def write_branded_excel(jobs, file_path, fmt=None):
             yes_key="easy_apply",
         )
 
-    wb.save(file_path)
+    atomic_workbook_save(wb, file_path)
     return len(zero_year) + len(one_year)

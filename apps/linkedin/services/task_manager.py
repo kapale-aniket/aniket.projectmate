@@ -219,6 +219,17 @@ def start_task(task_type, config=None, run_in_background=True, resume=False):
 
     sync_to_automation_configs(load_settings())
 
+    if task_type == ScraperTask.TASK_JOB:
+        try:
+            from apps.linkedin.services.automation_path import ensure_automation_path
+
+            ensure_automation_path()
+            from job.master_store import purge_old_files
+
+            purge_old_files()
+        except Exception:
+            pass
+
     merged_config = dict(config or {})
     if resume:
         merged_config["resume"] = True
