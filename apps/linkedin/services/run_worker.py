@@ -289,19 +289,28 @@ def run_task(task_id):
             ScraperTask.TASK_JOB,
             ScraperTask.TASK_PERFECT_MATCH,
         ):
-            from apps.linkedin.services.job_output_service import finalize_job_output
-
-            output_path = finalize_job_output()
-            if output_path:
-                file_name = os.path.basename(output_path)
-                completion_msg = f'Scraping completed. Check "{file_name}" in Output.'
+            if int((task.progress or {}).get("jobs_found") or 0) == 0 and (
+                "no jobs found" in " ".join(
+                    (log.message or "").lower() for log in task.logs.all()[:8]
+                )
+            ):
+                completion_msg = "No jobs found."
             else:
-                from datetime import date
+                from apps.linkedin.services.job_output_service import finalize_job_output
 
-                from job.master_store import get_file_prefix
-
-                file_name = f"{get_file_prefix()}_{date.today():%Y-%m-%d}.xlsx"
-                completion_msg = f'Scraping completed. Check "{file_name}" in Output.'
+                output_path = finalize_job_output()
+                if output_path:
+                    file_name = os.path.basename(output_path)
+                    completion_msg = f'Scraping completed. Check "{file_name}" in Output.'
+                else:
+                    completion_msg = "No jobs found."
+        if (completion_msg or "").strip().lower() == "no jobs found.":
+            completion_msg = "No jobs found."
+            progress = dict(task.progress or {})
+            progress["completion_message"] = completion_msg
+            progress["jobs_found"] = 0
+            task.progress = progress
+            task.save(update_fields=["progress"])
         _log(task, "success", completion_msg or f"{task.get_task_type_display()} completed successfully.")
         ActivityEvent.objects.create(
             event_type=task.task_type,

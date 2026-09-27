@@ -1,6 +1,7 @@
 """Admin panel forms."""
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
+from django.db.models import Q
 from django.utils.text import slugify
 from apps.accounts.models import User, StudentProfile
 from apps.classes.models import FreeClass
@@ -12,15 +13,15 @@ from apps.core.models import SiteSettings, ProjectPlan, ProjectPlanPerk
 
 
 class AdminLoginForm(AuthenticationForm):
-    username = forms.EmailField(
-        label="Email",
-        widget=forms.EmailInput(
+    username = forms.CharField(
+        label="Email or mobile",
+        widget=forms.TextInput(
             attrs={
                 "class": "ap-login__input",
-                "placeholder": "you@projectmate.com",
+                "placeholder": "Email or mobile number",
                 "autocomplete": "username",
                 "autofocus": True,
-                "inputmode": "email",
+                "inputmode": "text",
             }
         ),
     )
@@ -45,6 +46,22 @@ class AdminLoginForm(AuthenticationForm):
             }
         ),
     )
+
+    def clean(self):
+        username = (self.cleaned_data.get("username") or "").strip()
+        if username and "@" not in username:
+            digits = "".join(ch for ch in username if ch.isdigit())
+            key = digits[-10:] if len(digits) >= 10 else ""
+            user = None
+            if key:
+                user = (
+                    User.objects.filter(Q(is_staff=True) | Q(is_superuser=True) | Q(role="admin"))
+                    .filter(Q(profile__phone__endswith=key) | Q(profile__phone__icontains=key))
+                    .first()
+                )
+            if user:
+                self.cleaned_data["username"] = user.email
+        return super().clean()
 
 
 class AdminForgotPasswordForm(forms.Form):

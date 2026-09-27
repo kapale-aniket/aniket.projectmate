@@ -70,7 +70,7 @@
             {% endif %}
 
             <div class="ap-login__field">
-              <label class="ap-login__label" for="{{ form.username.id_for_label }}">Email</label>
+              <label class="ap-login__label" for="{{ form.username.id_for_label }}">Email or mobile</label>
               {{ form.username }}
               {% for e in form.username.errors %}<div class="ap-login__error">{{ e }}</div>{% endfor %}
             </div>

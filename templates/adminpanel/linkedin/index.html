@@ -1,6 +1,6 @@
 {% extends "adminpanel/base.html" %}
 {% load static %}
-{% block page_title %}LinkedIn parsing{% endblock %}
+{% block page_title %}LinkedIn searching{% endblock %}
 {% block extra_css %}<link href="{% static 'css/linkedin-admin.css' %}" rel="stylesheet">{% endblock %}
 {% block content %}
 {% include "adminpanel/linkedin/_nav.html" %}
@@ -56,7 +56,7 @@
           <h2 class="h6 mb-0">Recent activity</h2>
           <a class="small" href="{% url 'linkedin:logs' %}">All logs</a>
         </div>
-        <div id="liActivityList">
+        <div id="liActivityList" class="li-activity-row">
           {% for a in activity %}
           <div class="small border-bottom py-2">
             <strong>{{ a.title }}</strong>

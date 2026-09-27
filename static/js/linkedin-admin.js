@@ -201,14 +201,22 @@
     var stop = document.getElementById("liStopTask");
     var pause = document.getElementById("liPauseTask");
     var resume = document.getElementById("liResumeTask");
+    var show = document.getElementById("liShowScraping");
     var active = status === "pending" || status === "running" || status === "paused";
-    if (start) start.disabled = active;
-    if (stop) {
-      stop.hidden = !active;
-      stop.disabled = !active;
+    if (start) {
+      start.hidden = active;
+      start.disabled = active;
     }
+    [stop, pause, resume, show].forEach(function (btn) {
+      if (!btn) return;
+      btn.hidden = !active;
+    });
+    if (stop) stop.disabled = !active;
     if (pause) pause.disabled = status !== "running";
     if (resume) resume.disabled = status !== "paused";
+    var page = document.querySelector(".li-scraper-page");
+    if (page) page.classList.toggle("is-live", active);
+    if (window.PMLinkedInLivePreview) window.PMLinkedInLivePreview(active);
   }
 
   function updateProgress(data) {
@@ -474,6 +482,7 @@
     var img = document.getElementById("liPreviewImg");
     var placeholder = document.getElementById("liPreviewPlaceholder");
     var timer = null;
+    var previewOn = false;
 
     function stopFrames() {
       if (timer) {
@@ -498,28 +507,38 @@
       });
     }
 
-    if (showBtn) {
-      showBtn.addEventListener("click", function () {
-        setEnabled(true)
-          .then(function (data) {
-            toast(data.message || "Preview opened");
-            if (panel) panel.classList.remove("d-none");
-            stopFrames();
-            timer = setInterval(pullFrame, 1200);
-            pullFrame();
-          })
-          .catch(function (err) {
-            toast(err.message || "Preview failed", false);
-          });
-      });
+    function openPreview() {
+      if (previewOn) {
+        if (panel) panel.classList.remove("d-none");
+        return;
+      }
+      setEnabled(true)
+        .then(function () {
+          previewOn = true;
+          if (panel) panel.classList.remove("d-none");
+          stopFrames();
+          timer = setInterval(pullFrame, 1200);
+          pullFrame();
+        })
+        .catch(function (err) {
+          toast(err.message || "Preview failed", false);
+        });
     }
-    if (hideBtn) {
-      hideBtn.addEventListener("click", function () {
-        stopFrames();
-        setEnabled(false).catch(function () {});
-        if (panel) panel.classList.add("d-none");
-      });
+
+    function closePreview() {
+      previewOn = false;
+      stopFrames();
+      setEnabled(false).catch(function () {});
+      if (panel) panel.classList.add("d-none");
     }
+
+    window.PMLinkedInLivePreview = function (active) {
+      if (active) openPreview();
+      else closePreview();
+    };
+
+    if (showBtn) showBtn.addEventListener("click", openPreview);
+    if (hideBtn) hideBtn.addEventListener("click", closePreview);
   }
 
   function initOutput(base) {
@@ -753,9 +772,18 @@
     var base = (opts.apiBase || "/admin/linkedin/").replace(/\/?$/, "/");
     var pollTimer = null;
     var currentTaskId = null;
+    var toastedDoneKey = "";
 
     initSettings(base, taskType);
     if (features.preview) initPreview(base);
+    var scraperPage = document.querySelector(".li-scraper-page");
+    if (scraperPage) {
+      var setupCol = scraperPage.querySelector(".col-lg-5");
+      var liveCol = scraperPage.querySelector(".col-lg-7");
+      if (setupCol) setupCol.classList.add("li-setup-col");
+      if (liveCol) liveCol.classList.add("li-live-col");
+      toggleControls("");
+    }
     var runForm = document.getElementById("liScraperForm");
     if (runForm && taskType) {
       restoreRunFormDraft(runForm, taskType);
@@ -807,6 +835,15 @@
           currentTaskId = data.id;
           updateProgress(data);
           toggleControls(data.status);
+          if (!data.active && (data.status === "completed" || data.status === "stopped")) {
+            var doneKey = String(data.id) + ":" + data.status;
+            var doneMsg = (data.completion_message || "").toLowerCase();
+            var latestLog = data.logs && data.logs.length ? String(data.logs[0].message || "").toLowerCase() : "";
+            if (toastedDoneKey !== doneKey && (doneMsg.indexOf("no jobs found") >= 0 || latestLog.indexOf("no jobs found") >= 0)) {
+              toastedDoneKey = doneKey;
+              toast("No jobs found", false);
+            }
+          }
           if (data.active) {
             pollTimer = window.setTimeout(poll, 2000);
           }

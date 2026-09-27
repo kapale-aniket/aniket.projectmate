@@ -1,6 +1,6 @@
 {% extends "adminpanel/base.html" %}
 {% load static %}
-{% block page_title %}Connection parsing{% endblock %}
+{% block page_title %}Connection searching{% endblock %}
 {% block extra_css %}<link href="{% static 'css/linkedin-admin.css' %}" rel="stylesheet">{% endblock %}
 {% block content %}
 {% include "adminpanel/linkedin/_nav.html" %}
@@ -20,8 +20,10 @@
         <div class="alert alert-warning py-2 small">{{ busy_task.task_type_label }} is active. <a href="{{ busy_task.task_url }}">Go there</a></div>
         {% endif %}
         <form id="liScraperForm" data-task-type="connection">
-          <div class="mb-3"><label class="form-label">Keywords</label>{{ form.keywords }}</div>
-          <div class="mb-3"><label class="form-label">Locations</label>{{ form.locations }}</div>
+          <div class="row g-2 mb-3">
+            <div class="col-md-6"><label class="form-label">Keywords</label>{{ form.keywords }}</div>
+            <div class="col-md-6"><label class="form-label">Locations</label>{{ form.locations }}</div>
+          </div>
           <div class="li-num-grid">
             <div>
               <label class="form-label">Max per run</label>

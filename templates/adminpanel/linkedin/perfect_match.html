@@ -26,39 +26,39 @@
         </div>
         {% endif %}
         <form id="liScraperForm" data-task-type="perfect_match" {% if config_locked or other_task_busy %}data-config-locked="1"{% endif %}>
-          <div class="mb-3">
-            <label class="form-label">Skills (one per line)</label>
-            {{ form.skills }}
-            <p class="small text-muted mb-0">All skills are used in one search per location. A job is kept only if the description matches at least <strong>Min skills match</strong>.</p>
+          <div class="row g-2 mb-3 align-items-start">
+            <div class="col-md-6">
+              <label class="form-label">Skills (one per line)</label>
+              {{ form.skills }}
+              <p class="small text-muted mb-0">All skills are used in one search per location. A job is kept only if the description matches at least <strong>Min skills match</strong>.</p>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Locations (one per line)</label>
+              {{ form.locations }}
+            </div>
           </div>
-          <div class="li-field-row">
-            <div class="li-field li-field-grow">
+          <div class="row g-2 mb-3 align-items-end">
+            <div class="col-md-3">
               <label class="form-label">Experience</label>
               {{ form.experience }}
             </div>
-            <div class="li-field">
-              <label class="form-label">Min skills match</label>
-              {{ form.min_skills_match }}
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Locations (one per line)</label>
-            {{ form.locations }}
-          </div>
-          <div class="li-num-grid">
-            <div>
+            <div class="col">
               <label class="form-label">Max pages</label>
               {{ form.max_pages }}
             </div>
-            <div>
+            <div class="col">
               <label class="form-label">Max jobs (0=all)</label>
               {{ form.max_jobs }}
             </div>
-            <div>
+            <div class="col">
               <label class="form-label">Job age (hours)</label>
               {{ form.max_job_age_hours }}
             </div>
-            <div class="form-check">
+            <div class="col">
+              <label class="form-label">Min skills match</label>
+              {{ form.min_skills_match }}
+            </div>
+            <div class="col form-check mb-2">
               {{ form.resume }}
               <label class="form-check-label" for="{{ form.resume.id_for_label }}">Resume checkpoint</label>
             </div>
@@ -70,7 +70,6 @@
             </div>
             <p class="small text-muted mb-0">Excel <strong>skill_match_job_YYYY-MM-DD.xlsx</strong> is created only when: scrape finishes, you Stop, low-battery shutdown, or offline for 10 minutes · auto-deleted after 1 day.</p>
           </div>
-          <p class="small text-muted mb-2"><i class="fas fa-eye me-1"></i> Use <strong>Show</strong> for live browser preview while scraping.</p>
           <div class="li-action-grid">
             <button type="button" class="btn btn-ap" id="liStartTask" {% if other_task_busy %}disabled{% endif %}><i class="fas fa-play"></i><span>Start</span></button>
             <button type="button" class="btn btn-outline-danger" id="liStopTask"><i class="fas fa-stop"></i><span>Stop</span></button>

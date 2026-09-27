@@ -1,6 +1,6 @@
 {% extends "adminpanel/base.html" %}
 {% load static %}
-{% block page_title %}Job parsing{% endblock %}
+{% block page_title %}Job searching{% endblock %}
 {% block extra_css %}<link href="{% static 'css/linkedin-admin.css' %}" rel="stylesheet">{% endblock %}
 {% block content %}
 {% include "adminpanel/linkedin/_nav.html" %}
@@ -29,13 +29,15 @@
         </div>
         {% endif %}
         <form id="liScraperForm" data-task-type="job" {% if config_locked or other_task_busy %}data-config-locked="1"{% endif %}>
-          <div class="mb-3">
-            <label class="form-label">Keywords (one per line)</label>
-            {{ form.keywords }}
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Locations (one per line)</label>
-            {{ form.locations }}
+          <div class="row g-2 mb-3">
+            <div class="col-md-6">
+              <label class="form-label">Keywords (one per line)</label>
+              {{ form.keywords }}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Locations (one per line)</label>
+              {{ form.locations }}
+            </div>
           </div>
           <div class="li-num-grid">
             <div>
@@ -62,7 +64,6 @@
             </div>
             <p class="small text-muted mb-0">When checked, jobs from earlier runs are skipped.</p>
           </div>
-          <p class="small text-muted mb-2"><i class="fas fa-eye me-1"></i> Use <strong>Show</strong> for live browser preview while scraping.</p>
           <div class="li-action-grid">
             <button type="button" class="btn btn-ap" id="liStartTask" {% if other_task_busy %}disabled{% endif %}><i class="fas fa-play"></i><span>Start</span></button>
             <button type="button" class="btn btn-outline-danger" id="liStopTask"><i class="fas fa-stop"></i><span>Stop</span></button>

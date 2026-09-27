@@ -3265,7 +3265,7 @@ def save_progress(jobs_this_run, today_store, write_excel=False):
     today_store["jobs"] = all_today_jobs
     save_today_store(today_store)
 
-    if not write_excel:
+    if not write_excel or not all_today_jobs:
         if new_jobs:
             print(
                 f"  Checkpoint: {len(new_jobs)} new job(s) "
@@ -3560,7 +3560,7 @@ def run(allow_resume=True):
         finally:
             _stop_battery_watcher()
             _stop_stop_watcher()
-            flush_active_save(force_excel=True)
+            flush_active_save(force_excel=jobs_collected > 0)
             if stop_requested or progress.get("interrupted"):
                 progress["interrupted"] = True
                 sync_checkpoint_context(progress)
@@ -3580,8 +3580,11 @@ def run(allow_resume=True):
                 f"\nStopped — progress saved. Check \"{file_name}\" in Output."
             )
     else:
-        file_name = os.path.basename(daily_excel_path())
-        print(f'\nScraping completed. Check "{file_name}" in Output.')
+        if jobs_collected:
+            file_name = os.path.basename(daily_excel_path())
+            print(f'\nScraping completed. Check "{file_name}" in Output.')
+        else:
+            print("\nNo jobs found.")
 
 
 if __name__ == "__main__":

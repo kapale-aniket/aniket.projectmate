@@ -65,6 +65,12 @@ def parse_log_progress(task, message):
     if hiring_match:
         progress["hiring_posts"] = int(hiring_match.group(1))
 
+    if "no jobs found" in msg:
+        progress["jobs_found"] = 0
+        progress["percent"] = 100
+        progress["completion_message"] = "No jobs found."
+        return progress
+
     if "scraping completed" in msg or "done." in msg:
         progress["percent"] = 100
 
