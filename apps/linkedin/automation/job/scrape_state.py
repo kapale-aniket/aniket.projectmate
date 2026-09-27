@@ -2,10 +2,22 @@ import os
 from datetime import date
 
 from common.json_store import load_json, merge_json_defaults, save_json
-from job.config import JOB_KEYWORDS, LOCATIONS
 from job.master_store import OUTPUT_DIR
 
 STATE_PATH = os.path.join(OUTPUT_DIR, "scrape_state.json")
+
+
+def _live_keywords():
+    """Always read from job.config (never stale import-time copies)."""
+    import job.config as cfg
+
+    return list(getattr(cfg, "JOB_KEYWORDS", None) or [])
+
+
+def _live_locations():
+    import job.config as cfg
+
+    return list(getattr(cfg, "LOCATIONS", None) or [])
 
 
 def default_checkpoint(day=None):
@@ -40,15 +52,17 @@ def checkpoint_context(checkpoint):
     keyword_index = checkpoint.get("keyword_index", 0)
     page_num = checkpoint.get("page_num", 0)
     card_index = checkpoint.get("card_index", 0)
+    locations = _live_locations()
+    keywords = _live_keywords()
 
     location = (
-        LOCATIONS[location_index]
-        if 0 <= location_index < len(LOCATIONS)
+        locations[location_index]
+        if 0 <= location_index < len(locations)
         else "unknown location"
     )
     keyword = (
-        JOB_KEYWORDS[keyword_index]
-        if 0 <= keyword_index < len(JOB_KEYWORDS)
+        keywords[keyword_index]
+        if 0 <= keyword_index < len(keywords)
         else "unknown keyword"
     )
     return f"{keyword} | {location} | page {page_num + 1}, card {card_index + 1}"
@@ -60,15 +74,15 @@ def sync_checkpoint_context(checkpoint):
 
 
 def search_plan_signature(keywords=None, locations=None):
-    keywords = keywords if keywords is not None else JOB_KEYWORDS
-    locations = locations if locations is not None else LOCATIONS
+    keywords = keywords if keywords is not None else _live_keywords()
+    locations = locations if locations is not None else _live_locations()
     return "\n".join(keywords or []) + "\n---\n" + "\n".join(locations or [])
 
 
 def normalize_resume_indices(checkpoint, keywords=None, locations=None):
     """Clamp checkpoint indices so a changed keyword/location list does not skip all searches."""
-    keywords = keywords if keywords is not None else JOB_KEYWORDS
-    locations = locations if locations is not None else LOCATIONS
+    keywords = keywords if keywords is not None else _live_keywords()
+    locations = locations if locations is not None else _live_locations()
     page_num = max(0, int(checkpoint.get("page_num", 0) or 0))
 
     if not keywords:

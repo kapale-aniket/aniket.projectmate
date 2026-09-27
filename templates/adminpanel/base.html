@@ -37,21 +37,96 @@
   <div class="ap-shell">
     <aside class="ap-sidebar">
       <div class="ap-brand">Aniket.<span>Admin</span></div>
-      <nav class="ap-nav">
-        <a href="{% url 'adminpanel:dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Dashboard"><i class="fas fa-gauge"></i> <span>Dashboard</span></a>
-        <a href="{% url 'adminpanel:students' %}" class="{% if 'student' in request.resolver_match.url_name %}active{% endif %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Students"><i class="fas fa-users"></i> <span>Students</span></a>
-        <a href="{% url 'adminpanel:classes' %}" class="{% if request.resolver_match.url_name == 'classes' or request.resolver_match.url_name == 'class_create' or request.resolver_match.url_name == 'class_edit' or request.resolver_match.url_name == 'class_delete' or request.resolver_match.url_name == 'class_cancel' or request.resolver_match.url_name == 'class_duplicate' or request.resolver_match.url_name == 'class_toggle_reg' or request.resolver_match.url_name == 'class_go_live' %}active{% endif %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Free classes"><i class="fas fa-chalkboard"></i> <span>Classes</span></a>
-        <a href="{% url 'adminpanel:latest_classes' %}" class="{% if request.resolver_match.url_name == 'latest_classes' or request.resolver_match.url_name == 'free_class_mail' or request.resolver_match.url_name == 'paid_course_mail' %}active{% endif %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Latest classes &amp; mail"><i class="fas fa-envelope-open-text"></i> <span>Latest classes</span></a>
-        <a href="{% url 'adminpanel:courses' %}" class="{% if 'course' in request.resolver_match.url_name and request.resolver_match.url_name != 'paid_course_mail' %}active{% endif %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Paid courses"><i class="fas fa-graduation-cap"></i> <span>Courses</span></a>
-        <a href="{% url 'adminpanel:attendance' %}" class="{% if 'attendance' in request.resolver_match.url_name %}active{% endif %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Attendance"><i class="fas fa-calendar-check"></i> <span>Attendance</span></a>
-        <a href="{% url 'adminpanel:content' %}" class="{% if request.resolver_match.url_name == 'content' or 'announcement' in request.resolver_match.url_name or 'material' in request.resolver_match.url_name or 'notification' in request.resolver_match.url_name %}active{% endif %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Announcements, materials, notifications"><i class="fas fa-bullhorn"></i> <span>Content</span></a>
-        <a href="{% url 'adminpanel:community' %}" class="{% if request.resolver_match.url_name == 'community' or 'feedback' in request.resolver_match.url_name or 'resume' in request.resolver_match.url_name or 'referral' in request.resolver_match.url_name %}active{% endif %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Feedback, resumes, referrals"><i class="fas fa-comments"></i> <span>Community</span></a>
-        <a href="{% url 'linkedin:home' %}" class="{% if request.resolver_match.namespace == 'linkedin' %}active{% endif %}" data-bs-toggle="tooltip" data-bs-placement="right" title="LinkedIn job, connection &amp; post parsing"><i class="fab fa-linkedin"></i> <span>LinkedIn parsing</span></a>
-        <a href="{% url 'naukri:home' %}" class="{% if request.resolver_match.namespace == 'naukri' %}active{% endif %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Naukri apply history &amp; recommended jobs"><i class="fas fa-briefcase"></i> <span>Naukri parsing</span></a>
-        <a href="{% url 'adminpanel:logs' %}" class="{% if request.resolver_match.url_name == 'logs' or request.resolver_match.url_name == 'log_delete' or request.resolver_match.url_name == 'logs_clear' or request.resolver_match.url_name == 'email_logs' %}active{% endif %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Activity, email &amp; system logs"><i class="fas fa-clipboard-list"></i> <span>Logs</span></a>
-        <a href="{% url 'adminpanel:reports' %}" class="{% if request.resolver_match.url_name == 'reports' %}active{% endif %}" data-bs-toggle="tooltip" data-bs-placement="right" title="Reports & analytics"><i class="fas fa-chart-line"></i> <span>Reports</span></a>
-        <a href="{% url 'adminpanel:settings' %}" class="{% if request.resolver_match.url_name == 'settings' %}active{% endif %}" data-bs-toggle="tooltip" data-bs-placement="right" title="About page & site settings"><i class="fas fa-gear"></i> <span>Settings</span></a>
-        <a href="{% url 'core:home' %}" target="_blank" data-bs-toggle="tooltip" data-bs-placement="right" title="Open public site"><i class="fas fa-globe"></i> <span>View site</span></a>
+      <nav class="ap-nav" aria-label="Admin">
+        {% with url_name=request.resolver_match.url_name ns=request.resolver_match.namespace tab=request.GET.tab %}
+        <a href="{% url 'adminpanel:dashboard' %}" class="{% if ns == 'adminpanel' and url_name == 'dashboard' %}active{% endif %}"><i class="fas fa-gauge"></i> <span>Dashboard</span></a>
+
+        <div class="ap-menu{% if ns == 'crm' %} has-active is-open{% endif %}" data-ap-menu="crm">
+          <button type="button" class="ap-menu__toggle" data-ap-menu-toggle aria-expanded="false">
+            <i class="fas fa-address-book"></i>
+            <span>CRM</span>
+            <i class="fas fa-chevron-right ap-menu__chevron" aria-hidden="true"></i>
+          </button>
+          <div class="ap-submenu">
+            <a href="{% url 'crm:dashboard' %}" class="{% if ns == 'crm' and url_name == 'dashboard' %}active{% endif %}"><i class="fas fa-gauge"></i> <span>Overview</span></a>
+            <a href="{% url 'crm:contacts' %}" class="{% if ns == 'crm' and url_name == 'contacts' or ns == 'crm' and 'contact' in url_name %}active{% endif %}"><i class="fas fa-address-book"></i> <span>Contacts</span></a>
+            <a href="{% url 'crm:import' %}" class="{% if ns == 'crm' and 'import' in url_name %}active{% endif %}"><i class="fas fa-file-import"></i> <span>Import</span></a>
+            <a href="{% url 'crm:enquiries' %}" class="{% if ns == 'crm' and 'enquir' in url_name %}active{% endif %}"><i class="fas fa-inbox"></i> <span>Enquiries</span></a>
+            <a href="{% url 'crm:followups' %}" class="{% if ns == 'crm' and url_name == 'followups' %}active{% endif %}"><i class="fas fa-phone"></i> <span>Follow-ups</span></a>
+            <a href="{% url 'crm:whatsapp' %}" class="{% if ns == 'crm' and url_name == 'whatsapp' %}active{% endif %}"><i class="fab fa-whatsapp"></i> <span>WhatsApp</span></a>
+            <a href="{% url 'crm:payments' %}" class="{% if ns == 'crm' and url_name == 'payments' %}active{% endif %}"><i class="fas fa-indian-rupee-sign"></i> <span>Payments</span></a>
+            <a href="{% url 'crm:reports' %}" class="{% if ns == 'crm' and url_name == 'reports' %}active{% endif %}"><i class="fas fa-chart-line"></i> <span>Reports</span></a>
+          </div>
+        </div>
+
+        <div class="ap-menu{% if url_name == 'classes' or url_name == 'class_create' or url_name == 'class_edit' or url_name == 'class_delete' or url_name == 'class_cancel' or url_name == 'class_duplicate' or url_name == 'class_toggle_reg' or url_name == 'class_go_live' or url_name == 'latest_classes' or url_name == 'free_class_mail' or url_name == 'paid_course_mail' or 'course' in url_name or 'attendance' in url_name %} has-active is-open{% endif %}" data-ap-menu="academics">
+          <button type="button" class="ap-menu__toggle" data-ap-menu-toggle aria-expanded="false">
+            <i class="fas fa-chalkboard-user"></i>
+            <span>Academics</span>
+            <i class="fas fa-chevron-right ap-menu__chevron" aria-hidden="true"></i>
+          </button>
+          <div class="ap-submenu">
+            <a href="{% url 'adminpanel:classes' %}" class="{% if url_name == 'classes' or url_name == 'class_create' or url_name == 'class_edit' or url_name == 'class_delete' or url_name == 'class_cancel' or url_name == 'class_duplicate' or url_name == 'class_toggle_reg' or url_name == 'class_go_live' %}active{% endif %}"><i class="fas fa-chalkboard"></i> <span>Classes</span></a>
+            <a href="{% url 'adminpanel:latest_classes' %}" class="{% if url_name == 'latest_classes' or url_name == 'free_class_mail' or url_name == 'paid_course_mail' %}active{% endif %}"><i class="fas fa-envelope-open-text"></i> <span>Latest classes</span></a>
+            <a href="{% url 'adminpanel:courses' %}" class="{% if 'course' in url_name and url_name != 'paid_course_mail' %}active{% endif %}"><i class="fas fa-graduation-cap"></i> <span>Courses</span></a>
+            <a href="{% url 'adminpanel:attendance' %}" class="{% if 'attendance' in url_name %}active{% endif %}"><i class="fas fa-calendar-check"></i> <span>Attendance</span></a>
+          </div>
+        </div>
+
+        <div class="ap-menu{% if 'student' in url_name or url_name == 'community' or 'feedback' in url_name or 'resume' in url_name or 'referral' in url_name %} has-active is-open{% endif %}" data-ap-menu="people">
+          <button type="button" class="ap-menu__toggle" data-ap-menu-toggle aria-expanded="false">
+            <i class="fas fa-users"></i>
+            <span>People</span>
+            <i class="fas fa-chevron-right ap-menu__chevron" aria-hidden="true"></i>
+          </button>
+          <div class="ap-submenu">
+            <a href="{% url 'adminpanel:students' %}" class="{% if 'student' in url_name %}active{% endif %}"><i class="fas fa-user-graduate"></i> <span>Students</span></a>
+            <a href="{% url 'adminpanel:community' %}?tab=feedback" class="{% if 'feedback' in url_name or url_name == 'community' and tab != 'resumes' and tab != 'referrals' %}active{% endif %}"><i class="fas fa-comment-dots"></i> <span>Feedback</span></a>
+            <a href="{% url 'adminpanel:community' %}?tab=resumes" class="{% if 'resume' in url_name or url_name == 'community' and tab == 'resumes' %}active{% endif %}"><i class="fas fa-file-lines"></i> <span>Resumes</span></a>
+            <a href="{% url 'adminpanel:community' %}?tab=referrals" class="{% if 'referral' in url_name or url_name == 'community' and tab == 'referrals' %}active{% endif %}"><i class="fas fa-share-nodes"></i> <span>Referrals</span></a>
+          </div>
+        </div>
+
+        <div class="ap-menu{% if url_name == 'content' or 'announcement' in url_name or 'material' in url_name or 'project_' in url_name or 'notification' in url_name %} has-active is-open{% endif %}" data-ap-menu="content">
+          <button type="button" class="ap-menu__toggle" data-ap-menu-toggle aria-expanded="false">
+            <i class="fas fa-bullhorn"></i>
+            <span>Content</span>
+            <i class="fas fa-chevron-right ap-menu__chevron" aria-hidden="true"></i>
+          </button>
+          <div class="ap-submenu">
+            <a href="{% url 'adminpanel:content' %}?tab=announcements" class="{% if 'announcement' in url_name or url_name == 'content' and tab != 'materials' and tab != 'plans' and tab != 'notifications' %}active{% endif %}"><i class="fas fa-bullhorn"></i> <span>Announcements</span></a>
+            <a href="{% url 'adminpanel:content' %}?tab=materials" class="{% if 'material' in url_name or url_name == 'content' and tab == 'materials' %}active{% endif %}"><i class="fas fa-folder-open"></i> <span>Materials</span></a>
+            <a href="{% url 'adminpanel:content' %}?tab=plans" class="{% if 'project_' in url_name or url_name == 'content' and tab == 'plans' %}active{% endif %}"><i class="fas fa-layer-group"></i> <span>Project plans</span></a>
+            <a href="{% url 'adminpanel:content' %}?tab=notifications" class="{% if 'notification' in url_name or url_name == 'content' and tab == 'notifications' %}active{% endif %}"><i class="fas fa-bell"></i> <span>Notifications</span></a>
+          </div>
+        </div>
+
+        <div class="ap-menu{% if ns == 'linkedin' or ns == 'naukri' %} has-active is-open{% endif %}" data-ap-menu="parsing">
+          <button type="button" class="ap-menu__toggle" data-ap-menu-toggle aria-expanded="false">
+            <i class="fas fa-magnifying-glass"></i>
+            <span>Job parsing</span>
+            <i class="fas fa-chevron-right ap-menu__chevron" aria-hidden="true"></i>
+          </button>
+          <div class="ap-submenu">
+            <a href="{% url 'linkedin:home' %}" class="{% if ns == 'linkedin' %}active{% endif %}"><i class="fab fa-linkedin"></i> <span>LinkedIn</span></a>
+            <a href="{% url 'naukri:home' %}" class="{% if ns == 'naukri' %}active{% endif %}"><i class="fas fa-briefcase"></i> <span>Naukri</span></a>
+          </div>
+        </div>
+
+        <div class="ap-menu{% if ns == 'adminpanel' and url_name == 'logs' or ns == 'adminpanel' and url_name == 'log_delete' or ns == 'adminpanel' and url_name == 'logs_clear' or ns == 'adminpanel' and url_name == 'email_logs' or ns == 'adminpanel' and url_name == 'reports' or ns == 'adminpanel' and url_name == 'settings' %} has-active is-open{% endif %}" data-ap-menu="system">
+          <button type="button" class="ap-menu__toggle" data-ap-menu-toggle aria-expanded="false">
+            <i class="fas fa-gear"></i>
+            <span>System</span>
+            <i class="fas fa-chevron-right ap-menu__chevron" aria-hidden="true"></i>
+          </button>
+          <div class="ap-submenu">
+            <a href="{% url 'adminpanel:logs' %}" class="{% if url_name == 'logs' or url_name == 'log_delete' or url_name == 'logs_clear' or url_name == 'email_logs' %}active{% endif %}"><i class="fas fa-clipboard-list"></i> <span>Logs</span></a>
+            <a href="{% url 'adminpanel:reports' %}" class="{% if ns == 'adminpanel' and url_name == 'reports' %}active{% endif %}"><i class="fas fa-chart-line"></i> <span>Reports</span></a>
+            <a href="{% url 'adminpanel:settings' %}" class="{% if url_name == 'settings' %}active{% endif %}"><i class="fas fa-sliders"></i> <span>Settings</span></a>
+            <a href="{% url 'core:home' %}" target="_blank"><i class="fas fa-globe"></i> <span>View site</span></a>
+          </div>
+        </div>
+        {% endwith %}
       </nav>
       <form method="get" action="{% url 'adminpanel:logout' %}" class="mt-auto p-3">
         <button class="btn btn-outline-light btn-sm w-100" type="submit" data-bs-toggle="tooltip" title="Sign out"><i class="fas fa-sign-out-alt me-1"></i> Logout</button>
@@ -186,6 +261,29 @@
     }
 
     initTooltips();
+
+    document.querySelectorAll("[data-ap-menu]").forEach(function (menu) {
+      var btn = menu.querySelector("[data-ap-menu-toggle]");
+      if (!btn) return;
+      function syncExpanded() {
+        var open = menu.classList.contains("is-open") || menu.classList.contains("has-active") || menu.matches(":hover");
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      }
+      if (menu.classList.contains("has-active")) menu.classList.add("is-open");
+      syncExpanded();
+      menu.addEventListener("mouseenter", function () {
+        menu.classList.add("is-open");
+        syncExpanded();
+      });
+      menu.addEventListener("mouseleave", function () {
+        if (!menu.classList.contains("has-active")) menu.classList.remove("is-open");
+        syncExpanded();
+      });
+      btn.addEventListener("click", function () {
+        menu.classList.toggle("is-open");
+        syncExpanded();
+      });
+    });
 
     document.body.addEventListener('htmx:beforeRequest', function (e) {
       showLoader();

@@ -88,9 +88,9 @@ def _read_job_checkpoint():
         return {}
 
 
-def _count_today_jobs():
+def _count_today_jobs(prefix="aniket_projectmate"):
     today = date.today().strftime("%Y-%m-%d")
-    json_path = _automation_root() / "job" / "output" / f"aniket_projectmate_{today}.json"
+    json_path = _automation_root() / "job" / "output" / f"{prefix}_{today}.json"
     if not json_path.exists():
         return 0
     try:
@@ -103,12 +103,21 @@ def _count_today_jobs():
 
 
 def build_job_search_checklist(task):
-    """Keyword × location pairs for the job scraper progress todo list."""
-    if not task or task.task_type != ScraperTask.TASK_JOB:
+    """Keyword × location pairs for the job / perfect-match scraper progress list."""
+    if not task or task.task_type not in (
+        ScraperTask.TASK_JOB,
+        ScraperTask.TASK_PERFECT_MATCH,
+    ):
         return []
 
     config = task.config or {}
     keywords = config.get("keywords") or []
+    skills = config.get("skills") or []
+    # Perfect Match: always one combined skills query × locations.
+    if task.task_type == ScraperTask.TASK_PERFECT_MATCH and skills:
+        keywords = [" ".join(str(s).strip() for s in skills if str(s).strip())]
+    elif not keywords and skills:
+        keywords = list(skills)
     locations = config.get("locations") or []
     if not keywords or not locations:
         return []
@@ -161,8 +170,13 @@ def get_live_progress(task):
     progress = dict(task.progress or {})
     task_type = task.task_type
 
-    if task_type == ScraperTask.TASK_JOB:
+    if task_type in (ScraperTask.TASK_JOB, ScraperTask.TASK_PERFECT_MATCH):
         keywords = config.get("keywords") or []
+        skills = config.get("skills") or []
+        if task_type == ScraperTask.TASK_PERFECT_MATCH and skills:
+            keywords = [" ".join(str(s).strip() for s in skills if str(s).strip())]
+        elif not keywords and skills:
+            keywords = list(skills)
         locations = config.get("locations") or []
         max_pages = int(config.get("max_pages") or 40)
         checkpoint = _read_job_checkpoint()
@@ -185,6 +199,11 @@ def get_live_progress(task):
         search_pct = (current_search / total_searches) * 100
         page_pct = ((page_num + 1) / max(1, max_pages)) * (100 / total_searches)
         percent = min(99, int(search_pct + page_pct)) if task.status == ScraperTask.STATUS_RUNNING else progress.get("percent", 0)
+        file_prefix = (
+            "skill_match_job"
+            if task_type == ScraperTask.TASK_PERFECT_MATCH
+            else "aniket_projectmate"
+        )
 
         progress.update(
             {
@@ -192,7 +211,7 @@ def get_live_progress(task):
                 "location": progress.get("location") or location,
                 "page": f"{page_num + 1} / {max_pages}",
                 "search_progress": f"{min(current_search + 1, total_searches)} / {total_searches}",
-                "jobs_found": _count_today_jobs(),
+                "jobs_found": _count_today_jobs(prefix=file_prefix),
                 "percent": percent if task.status == ScraperTask.STATUS_RUNNING else progress.get("percent", percent),
             }
         )

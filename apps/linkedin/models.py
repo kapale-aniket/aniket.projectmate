@@ -4,12 +4,14 @@ from django.utils import timezone
 
 class ScraperTask(models.Model):
     TASK_JOB = "job"
+    TASK_PERFECT_MATCH = "perfect_match"
     TASK_CONNECTION = "connection"
     TASK_POSTS = "posts"
     TASK_SESSION = "session"
 
     TASK_TYPES = [
         (TASK_JOB, "Job Scraper"),
+        (TASK_PERFECT_MATCH, "Perfect Match Job Search"),
         (TASK_CONNECTION, "Connection Scraper"),
         (TASK_POSTS, "Posts Scraper"),
         (TASK_SESSION, "LinkedIn Session"),

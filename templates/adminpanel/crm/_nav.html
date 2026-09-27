@@ -1,0 +1,10 @@
+<nav class="ap-linkedin-nav mb-3">
+  <a href="{% url 'crm:dashboard' %}" class="{% if crm_nav == 'dashboard' %}active{% endif %}"><i class="fas fa-gauge"></i> Overview</a>
+  <a href="{% url 'crm:contacts' %}" class="{% if crm_nav == 'contacts' %}active{% endif %}"><i class="fas fa-address-book"></i> Contacts</a>
+  <a href="{% url 'crm:import' %}" class="{% if crm_nav == 'import' %}active{% endif %}"><i class="fas fa-file-import"></i> Import</a>
+  <a href="{% url 'crm:enquiries' %}" class="{% if crm_nav == 'enquiries' %}active{% endif %}"><i class="fas fa-inbox"></i> Enquiries</a>
+  <a href="{% url 'crm:followups' %}" class="{% if crm_nav == 'followups' %}active{% endif %}"><i class="fas fa-phone"></i> Follow-ups</a>
+  <a href="{% url 'crm:whatsapp' %}" class="{% if crm_nav == 'whatsapp' %}active{% endif %}"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+  <a href="{% url 'crm:payments' %}" class="{% if crm_nav == 'payments' %}active{% endif %}"><i class="fas fa-indian-rupee-sign"></i> Payments</a>
+  <a href="{% url 'crm:reports' %}" class="{% if crm_nav == 'reports' %}active{% endif %}"><i class="fas fa-chart-line"></i> Reports</a>
+</nav>

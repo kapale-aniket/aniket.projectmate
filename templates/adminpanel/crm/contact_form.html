@@ -1,0 +1,85 @@
+{% extends "adminpanel/crm/_shell.html" %}
+{% block page_title %}{% if contact %}Edit contact{% else %}New contact{% endif %}{% endblock %}
+{% block content %}
+{% include "adminpanel/crm/_nav.html" %}
+<div class="row g-3 li-scraper-page">
+  <div class="col-lg-7">
+    <div class="ap-card">
+      <h2 class="h6 mb-1">{% if contact %}Edit contact{% else %}New contact{% endif %}</h2>
+      <p class="small text-muted mb-3">One person per contact number.</p>
+      {% if duplicate %}
+      <div class="alert alert-warning py-2 small">
+        <strong>Existing contact found</strong>
+        <div>{{ duplicate.name }} — {{ duplicate.mobile }}</div>
+        Skip, update the saved record, or merge only the empty fields.
+      </div>
+      {% endif %}
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label">Full name</label>
+          <input class="form-control" name="name" required value="{{ data.name }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Email</label>
+          <input class="form-control" type="email" name="email" value="{{ data.email }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Contact number</label>
+          <input class="form-control" name="mobile" value="{{ data.mobile }}" placeholder="9876543210">
+        </div>
+        <div class="li-num-grid">
+          <div>
+            <label class="form-label">Currently studying?</label>
+            <select class="form-select" name="currently_studying">
+              <option value="">—</option>
+              <option value="yes" {% if data.currently_studying == "yes" %}selected{% endif %}>Yes</option>
+              <option value="no" {% if data.currently_studying == "no" %}selected{% endif %}>No</option>
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Current year of study</label>
+            <input class="form-control" name="year_of_study" value="{{ data.year_of_study }}" placeholder="MCA 1st Year">
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">College name with location</label>
+          <input class="form-control" name="college" value="{{ data.college }}" placeholder="ABC College, Pune">
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Following on Instagram?</label>
+            <select class="form-select" name="follows_instagram">
+              <option value="">—</option>
+              <option value="yes" {% if data.follows_instagram == "yes" %}selected{% endif %}>Yes, I follow</option>
+              <option value="will" {% if data.follows_instagram == "will" %}selected{% endif %}>I will follow now</option>
+            </select>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+          {% if duplicate %}
+          <button class="btn btn-outline-secondary" name="duplicate_action" value="skip">Skip</button>
+          <button class="btn btn-outline-primary" name="duplicate_action" value="update">Update</button>
+          <button class="btn btn-ap" name="duplicate_action" value="merge">Merge</button>
+          {% else %}
+          <button class="btn btn-ap" type="submit">Save contact</button>
+          {% endif %}
+          <a class="btn btn-outline-secondary" href="{% url 'crm:contacts' %}">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="ap-card">
+      <h2 class="h6 mb-2">Contact sheet</h2>
+      <ul class="small text-muted ps-3 mb-0">
+        <li>Full name</li>
+        <li>Email</li>
+        <li>Contact number</li>
+        <li>Currently studying?</li>
+        <li>Current year of study, such as MCA 1st Year</li>
+        <li>College name with location</li>
+        <li>Following on Instagram?</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

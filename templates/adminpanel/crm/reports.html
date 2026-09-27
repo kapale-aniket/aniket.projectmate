@@ -1,0 +1,32 @@
+{% extends "adminpanel/crm/_shell.html" %}
+{% block page_title %}CRM reports{% endblock %}
+{% block content %}
+{% include "adminpanel/crm/_nav.html" %}
+<div class="row g-3">
+  <div class="col-md-4"><div class="ap-card ap-stat"><div class="num">{{ conversion }}%</div><div class="lbl">Enquiry conversion</div></div></div>
+  <div class="col-md-4"><div class="ap-card ap-stat"><div class="num">{{ contacts_month }}</div><div class="lbl">Contacts added this month</div></div></div>
+  <div class="col-lg-6">
+    <div class="ap-card">
+      <h3 class="h6">Enquiries by source</h3>
+      {% for row in by_source %}<div class="small d-flex justify-content-between border-bottom py-1"><span>{{ row.source }}</span><span>{{ row.total }}</span></div>{% empty %}<p class="small text-muted mb-0">No enquiries yet.</p>{% endfor %}
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="ap-card">
+      <h3 class="h6">Enquiries by business</h3>
+      {% for row in by_business %}<div class="small d-flex justify-content-between border-bottom py-1"><span>{{ row.business }}</span><span>{{ row.total }}</span></div>{% endfor %}
+    </div>
+  </div>
+  <div class="col-12">
+    <div class="ap-card">
+      <h3 class="h6">Mediators</h3>
+      {% for person in mediators %}
+      <div class="small d-flex justify-content-between border-bottom py-1">
+        <a href="{% url 'crm:contact_detail' person.pk %}">{{ person.name }}</a>
+        <span>{{ person.referral_count }} referrals</span>
+      </div>
+      {% empty %}<p class="small text-muted mb-0">Mark a contact as Mediator to track referrals.</p>{% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}

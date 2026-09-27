@@ -37,6 +37,16 @@ DEFAULT_SETTINGS = {
         "instagram_url": "https://www.instagram.com/aniket.projectmate?igsh=MWtkbWs3bGE1N2Jtag==",
         "instagram_handle": "aniket.projectmate",
     },
+    "perfect_match": {
+        "skills": ["python", "django"],
+        "experience": "fresher",
+        "min_skills_match": 1,
+        "locations": ["Pune", "Bangalore"],
+        "max_pages": 40,
+        "max_jobs": 0,
+        "max_job_age_hours": 24,
+        "skip_previous_jobs": False,
+    },
     "connection": {
         "keywords": [
             "Python Team Lead",
@@ -63,6 +73,9 @@ DEFAULT_SETTINGS = {
     "browser": {
         "headless_default": False,
         "block_images": True,
+    },
+    "power": {
+        "shutdown_percent": 3,
     },
     "output": {
         "file_prefix": "aniket_projectmate",
@@ -104,6 +117,20 @@ def normalize_cursor_settings(data):
     }
 
 
+def normalize_power_settings(data):
+    """Low-battery save + shutdown threshold for job / perfect-match scrapes."""
+    defaults = DEFAULT_SETTINGS["power"]
+    if not isinstance(data, dict):
+        data = {}
+    try:
+        percent = int(data.get("shutdown_percent", defaults["shutdown_percent"]))
+    except (TypeError, ValueError):
+        percent = defaults["shutdown_percent"]
+    return {
+        "shutdown_percent": max(1, min(99, percent)),
+    }
+
+
 def _deep_merge(base, override):
     merged = dict(base)
     for key, value in override.items():
@@ -129,6 +156,7 @@ def load_settings():
                 else:
                     section["excel_format"] = EXCEL_FORMAT_DEFAULTS[scraper_type]()
             merged["cursor"] = normalize_cursor_settings(merged.get("cursor", {}))
+            merged["power"] = normalize_power_settings(merged.get("power", {}))
             return merged
         except (OSError, json.JSONDecodeError):
             pass
@@ -136,6 +164,7 @@ def load_settings():
     for scraper_type in ("job", "connection", "posts"):
         base[scraper_type]["excel_format"] = EXCEL_FORMAT_DEFAULTS[scraper_type]()
     base["cursor"] = normalize_cursor_settings(base.get("cursor", {}))
+    base["power"] = normalize_power_settings(base.get("power", {}))
     return base
 
 
@@ -158,6 +187,7 @@ def save_settings(data):
                 scraper_type, section["excel_format"]
             )
     merged["cursor"] = normalize_cursor_settings(merged.get("cursor", {}))
+    merged["power"] = normalize_power_settings(merged.get("power", {}))
     if "job" in merged:
         merged["job"]["max_job_age_hours"] = normalize_max_job_age_hours(
             merged["job"].get("max_job_age_hours", 24)
@@ -201,6 +231,13 @@ def sync_to_automation_configs(app_settings):
             "INSTAGRAM_URL": job_cfg.get("instagram_url", ""),
             "INSTAGRAM_HANDLE": job_cfg.get("instagram_handle", "aniket.projectmate"),
             "SKIP_SEARCHES": [],
+            "SKIP_PREVIOUS_JOBS": bool(job_cfg.get("skip_previous_jobs", False)),
+            "SCRAPE_MODE": "job",
+            "PERFECT_MATCH_SKILLS": [],
+            "PERFECT_MATCH_EXPERIENCE": "",
+            "PERFECT_MATCH_MIN_SKILLS": 1,
+            "JOB_SEARCH_DISTANCE_KM": int(job_cfg.get("job_search_distance_km", 100) or 100),
+            "JOB_SEARCH_SORT_BY": job_cfg.get("job_search_sort_by", "R") or "R",
         },
         extra_lines=["RESULTS_PER_PAGE = 25"],
     )

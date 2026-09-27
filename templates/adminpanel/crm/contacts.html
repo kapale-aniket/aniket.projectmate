@@ -1,0 +1,129 @@
+{% extends "adminpanel/crm/_shell.html" %}
+{% block page_title %}Contacts{% endblock %}
+{% block content %}
+{% include "adminpanel/crm/_nav.html" %}
+<div class="li-scraper-page">
+  <div class="ap-card crm-list-bar mb-3">
+    <form method="get" id="crmFilterForm" class="crm-list-filters">
+      <input class="form-control" name="q" value="{{ q }}" placeholder="Name, number, college, email">
+      <input class="form-control" name="year" value="{{ year }}" placeholder="Year, e.g. MCA 1st">
+      <select class="form-select crm-college-select" name="college" id="crmCollegeFilter" aria-label="College" multiple>
+        {% for name in colleges %}
+        <option value="{{ name }}" {% if name in college_selected %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+      <select class="form-select" name="instagram" aria-label="Following on Instagram">
+        <option value="">Instagram</option>
+        <option value="yes" {% if instagram == "yes" %}selected{% endif %}>Instagram: Yes</option>
+        <option value="no" {% if instagram == "no" %}selected{% endif %}>Instagram: No</option>
+      </select>
+      <select class="form-select" name="sort_by" aria-label="Sort">
+        <option value="stars-desc" {% if sort_by == "stars-desc" or not sort_by %}selected{% endif %}>Stars: high to low</option>
+        <option value="stars-asc" {% if sort_by == "stars-asc" %}selected{% endif %}>Stars: low to high</option>
+        <option value="name-asc" {% if sort_by == "name-asc" %}selected{% endif %}>Name A–Z</option>
+        <option value="name-desc" {% if sort_by == "name-desc" %}selected{% endif %}>Name Z–A</option>
+        <option value="college-asc" {% if sort_by == "college-asc" %}selected{% endif %}>College A–Z</option>
+        <option value="year-asc" {% if sort_by == "year-asc" %}selected{% endif %}>Year A–Z</option>
+        <option value="email-asc" {% if sort_by == "email-asc" %}selected{% endif %}>Email A–Z</option>
+      </select>
+    </form>
+    <div class="crm-list-actions">
+      <a class="btn btn-outline-secondary btn-sm" href="{% url 'crm:import' %}"><i class="fas fa-file-import me-1"></i>Import</a>
+      <button class="btn btn-outline-primary btn-sm" type="submit" form="crmExportForm" name="format" value="xlsx"><i class="fas fa-file-excel me-1"></i>Excel</button>
+      <button class="btn btn-outline-primary btn-sm" type="submit" form="crmExportForm" name="format" value="csv"><i class="fas fa-file-csv me-1"></i>CSV</button>
+      <button class="btn btn-outline-success btn-sm" type="submit" form="crmExportForm" name="format" value="vcf"><i class="fas fa-address-card me-1"></i>VCF</button>
+      <a class="btn btn-ap btn-sm" href="{% url 'crm:contact_new' %}"><i class="fas fa-plus me-1"></i>Add</a>
+    </div>
+  </div>
+
+  <form id="crmExportForm" method="post" action="{% url 'crm:export' %}">
+    {% csrf_token %}
+    <input type="hidden" name="q" value="{{ q }}">
+    {% for name in college_selected %}
+    <input type="hidden" name="college" value="{{ name }}">
+    {% endfor %}
+    <input type="hidden" name="year" value="{{ year }}">
+    <input type="hidden" name="instagram" value="{{ instagram }}">
+    <input type="hidden" name="sort_by" value="{{ sort_by|default:'stars-desc' }}">
+    <div class="ap-card table-responsive p-0">
+      <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+        <h2 class="h6 mb-0">Students</h2>
+        <span class="small text-muted">{{ count }} contacts</span>
+      </div>
+      <table class="table ap-table mb-0">
+        <thead>
+          <tr>
+            <th></th>
+            <th><a class="crm-sort{% if sort == 'name' %} is-active{% endif %}" href="?{{ sort_name }}">Full name{% if sort == 'name' %} {% if order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}</a></th>
+            <th><a class="crm-sort{% if sort == 'email' %} is-active{% endif %}" href="?{{ sort_email }}">Email{% if sort == 'email' %} {% if order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}</a></th>
+            <th><a class="crm-sort{% if sort == 'mobile' %} is-active{% endif %}" href="?{{ sort_mobile }}">Contact{% if sort == 'mobile' %} {% if order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}</a></th>
+            <th><a class="crm-sort{% if sort == 'year' %} is-active{% endif %}" href="?{{ sort_year }}">Year{% if sort == 'year' %} {% if order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}</a></th>
+            <th><a class="crm-sort{% if sort == 'college' %} is-active{% endif %}" href="?{{ sort_college }}">College{% if sort == 'college' %} {% if order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}</a></th>
+            <th><a class="crm-sort{% if sort == 'instagram' %} is-active{% endif %}" href="?{{ sort_instagram }}">Instagram{% if sort == 'instagram' %} {% if order == 'asc' %}↑{% else %}↓{% endif %}{% endif %}</a></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for contact in contacts %}
+          <tr>
+            <td><input type="checkbox" name="ids" value="{{ contact.pk }}" aria-label="Select {{ contact.name }}"></td>
+            <td>
+              <a href="{% url 'crm:contact_detail' contact.pk %}">{{ contact.name }}</a>
+            </td>
+            <td>{{ contact.email|default:"—" }}</td>
+            <td>
+              {{ contact.mobile_display }}
+              {% if contact.star_count %}
+              <span class="crm-stars" title="In {{ contact.star_count }} sheet{{ contact.star_count|pluralize }}">{% for _ in contact.star_icons %}<i class="fas fa-star"></i>{% endfor %}</span>
+              {% endif %}
+            </td>
+            <td>{{ contact.year_of_study }}</td>
+            <td>{{ contact.college }}</td>
+            <td>
+              {% if contact.instagram_reply == "yes" or contact.follows_instagram %}Yes
+              {% elif contact.instagram_reply == "will" %}<i class="fas fa-circle-check text-success" title="I will follow now"></i>
+              {% else %}—{% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="7" class="text-muted">No contacts yet. Add one or import a spreadsheet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block extra_js %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+(function () {
+  var form = document.getElementById("crmFilterForm");
+  if (!form) return;
+  var timer = null;
+  var college = document.getElementById("crmCollegeFilter");
+  if (window.jQuery && college) {
+    jQuery(college).select2({
+      width: "100%",
+      placeholder: "College",
+      allowClear: true,
+      closeOnSelect: true,
+      dropdownParent: jQuery(form)
+    }).on("change", function () {
+      form.submit();
+    });
+  }
+  form.querySelectorAll("select").forEach(function (el) {
+    if (el === college) return;
+    el.addEventListener("change", function () { form.submit(); });
+  });
+  form.querySelectorAll("input[name='q'], input[name='year']").forEach(function (el) {
+    el.addEventListener("input", function () {
+      clearTimeout(timer);
+      timer = setTimeout(function () { form.submit(); }, 400);
+    });
+  });
+})();
+</script>
+{% endblock %}

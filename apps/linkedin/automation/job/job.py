@@ -34,12 +34,20 @@ try:
         SKIP_PREVIOUS_JOBS,
         JOB_SEARCH_DISTANCE_KM,
         JOB_SEARCH_SORT_BY,
+        SCRAPE_MODE,
+        PERFECT_MATCH_SKILLS,
+        PERFECT_MATCH_EXPERIENCE,
+        PERFECT_MATCH_MIN_SKILLS,
     )
 except ImportError:
     SKIP_SEARCHES = []
     SKIP_PREVIOUS_JOBS = False
     JOB_SEARCH_SORT_BY = "R"
     JOB_SEARCH_DISTANCE_KM = 100
+    SCRAPE_MODE = "job"
+    PERFECT_MATCH_SKILLS = []
+    PERFECT_MATCH_EXPERIENCE = ""
+    PERFECT_MATCH_MIN_SKILLS = 1
 from job.job_scraper import parse_job_detail
 from job.job_filter import (
     KEYWORD_MATCH_MODE,
@@ -50,6 +58,7 @@ from job.job_filter import (
     parse_posted,
     should_skip_for_fresher_filter,
     should_skip_for_keyword_mismatch,
+    should_skip_for_perfect_match,
     sort_jobs_newest_first,
 )
 from job.excel_writer import write_branded_excel
@@ -90,6 +99,8 @@ jobs_collected = 0
 progress = default_checkpoint()
 _active_save_ctx = None
 _stop_watcher_stop = threading.Event()
+_battery_watcher_stop = threading.Event()
+_low_battery_triggered = False
 
 
 def current_skip_searches():
@@ -100,6 +111,7 @@ def current_skip_searches():
 
 
 def pause_search(page):
+    _check_low_battery_guard()
     search_delay(page, SEARCH_MIN_DELAY, SEARCH_MAX_DELAY)
 
 CARD_POSTED_PATTERN = re.compile(
@@ -260,14 +272,85 @@ def _stop_stop_watcher():
     _stop_watcher_stop.set()
 
 
+def _check_low_battery_guard():
+    """If battery below configured % and unplugged: save Excel, stop scrape, shut down."""
+    global stop_requested, interrupt_pending, _low_battery_triggered
+    if _low_battery_triggered or stop_requested:
+        return True
+    try:
+        from common.battery_guard import (
+            format_status,
+            get_battery_status,
+            get_critical_percent,
+            is_critical_unplugged,
+            request_system_shutdown,
+        )
+    except Exception:
+        return False
+
+    status = get_battery_status()
+    threshold = get_critical_percent()
+    if not is_critical_unplugged(status, threshold=threshold):
+        return False
+
+    _low_battery_triggered = True
+    stop_requested = True
+    interrupt_pending = False
+    progress["interrupted"] = True
+    sync_checkpoint_context(progress)
+    try:
+        save_checkpoint(progress)
+    except Exception:
+        pass
+
+    print(
+        f"\n*** CRITICAL BATTERY: {format_status(status)} "
+        f"(below {threshold}% and charger unplugged) ***",
+        flush=True,
+    )
+    print("*** Saving all searched jobs to Excel, then shutting down… ***", flush=True)
+    try:
+        flush_active_save(force_excel=True)
+    except Exception as exc:
+        print(f"*** Excel save error during low-battery shutdown: {exc} ***", flush=True)
+
+    request_system_shutdown(
+        reason=(
+            f"Low battery {format_status(status)} — LinkedIn job scrape saved to Excel"
+        )
+    )
+    return True
+
+
+def _battery_watcher_loop():
+    while not _battery_watcher_stop.wait(8.0):
+        if _check_low_battery_guard():
+            break
+
+
+def _start_battery_watcher():
+    _battery_watcher_stop.clear()
+    thread = threading.Thread(
+        target=_battery_watcher_loop, daemon=True, name="job-battery-watcher"
+    )
+    thread.start()
+    return thread
+
+
+def _stop_battery_watcher():
+    _battery_watcher_stop.set()
+
+
 def check_interrupt(page, context_msg):
+    if _check_low_battery_guard():
+        return False
     _django_stop_requested()
     if stop_requested:
         return False
     if interrupt_pending:
         return persist_progress(context_msg)
     if page and is_offline(page):
-        return persist_progress(f"No internet — {context_msg}")
+        return handle_offline_outage(page, context_msg)
     return True
 
 
@@ -1424,12 +1507,19 @@ def _search_sort_distance_ok(page):
                     const params = new URLSearchParams(location.search);
                     sortOk = params.get('sortBy') === sortBy;
                     const d = parseFloat(params.get('distance') || '0');
-                    distOk = d >= minDistance;
+                    distOk = d >= minDistance - 0.01;
                 } catch (e) {}
-                for (const btn of document.querySelectorAll('button')) {
-                    const t = norm(btn.innerText);
+                for (const el of document.querySelectorAll('button, [role="button"], label')) {
+                    const t = norm(el.innerText || el.textContent || '');
                     if (t.includes('most relevant')) sortOk = true;
-                    if (t === `${minDistance} km` || t.startsWith(`${minDistance} km`)) distOk = true;
+                    if (
+                        t === `${minDistance} km` ||
+                        t.startsWith(`${minDistance} km`) ||
+                        t.includes(`${minDistance} km`) ||
+                        t.includes(`${minDistance}km`)
+                    ) {
+                        distOk = true;
+                    }
                 }
                 return { sortOk, distOk };
             }""",
@@ -1437,6 +1527,78 @@ def _search_sort_distance_ok(page):
         )
     except Exception:
         return {"sortOk": False, "distOk": False}
+
+
+def _click_distance_option(page):
+    """Open Distance filter and pick 100 km (LinkedIn jobs UI)."""
+    km = int(JOB_SEARCH_DISTANCE_KM)
+    open_selectors = (
+        f'button:has-text("{km} km")',
+        'button:has-text("Distance")',
+        'button[aria-label*="Distance" i]',
+        'button:has-text("0 km")',
+        'button:has-text("25 km")',
+        'button:has-text("40 km")',
+        'button:has-text("50 km")',
+        'button:has-text("80 km")',
+        'button:has-text("Exact location")',
+        'button:has-text("Anywhere")',
+        '[data-test-distance-filter]',
+        'button.artdeco-pill:has-text("km")',
+    )
+    for selector in open_selectors:
+        btn = page.locator(selector).first
+        if btn.count() == 0:
+            continue
+        try:
+            text = (btn.inner_text(timeout=1000) or "").strip().lower()
+            if f"{km} km" in text or f"{km}km" in text.replace(" ", ""):
+                return True
+            btn.click(timeout=3000)
+            page.wait_for_timeout(450)
+            for opt_sel in (
+                f'label:has-text("{km} km")',
+                f'span:has-text("{km} km")',
+                f'div[role="option"]:has-text("{km} km")',
+                f'button:has-text("{km} km")',
+                f'li:has-text("{km} km")',
+                f'[role="menuitem"]:has-text("{km} km")',
+                f'[role="radio"]:has-text("{km} km")',
+                f'input[type="radio"][value="{km}"], input[type="radio"][value="{float(km)}"]',
+            ):
+                opt = page.locator(opt_sel).first
+                if opt.count() == 0:
+                    continue
+                try:
+                    opt.click(timeout=2000)
+                    page.wait_for_timeout(700)
+                    return True
+                except Exception:
+                    continue
+            # Some LinkedIn builds use a slider / listitem click via JS text match.
+            clicked = page.evaluate(
+                """(km) => {
+                    const want = `${km} km`;
+                    const nodes = Array.from(document.querySelectorAll(
+                        'label, span, div, li, button, [role="option"], [role="menuitem"], [role="radio"]'
+                    ));
+                    for (const n of nodes) {
+                        const t = (n.innerText || n.textContent || '').replace(/\\s+/g, ' ').trim();
+                        if (t === want || t.startsWith(want)) {
+                            n.click();
+                            return true;
+                        }
+                    }
+                    return false;
+                }""",
+                km,
+            )
+            if clicked:
+                page.wait_for_timeout(700)
+                return True
+        except Exception:
+            continue
+    return False
 
 
 def apply_search_sort_and_distance(page):
@@ -1475,32 +1637,7 @@ def apply_search_sort_and_distance(page):
 
     state = _search_sort_distance_ok(page)
     if not state.get("distOk"):
-        for selector in (
-            f'button:has-text("{JOB_SEARCH_DISTANCE_KM} km")',
-            'button:has-text("0 km")',
-            'button[aria-label*="Distance" i]',
-        ):
-            btn = page.locator(selector).first
-            if btn.count() == 0:
-                continue
-            try:
-                text = (btn.inner_text(timeout=1000) or "").strip().lower()
-                if f"{JOB_SEARCH_DISTANCE_KM} km" in text:
-                    state["distOk"] = True
-                    break
-                btn.click(timeout=3000)
-                page.wait_for_timeout(500)
-                opt = page.locator(
-                    f'label:has-text("{JOB_SEARCH_DISTANCE_KM} km"), '
-                    f'span:has-text("{JOB_SEARCH_DISTANCE_KM} km"), '
-                    f'div[role="option"]:has-text("{JOB_SEARCH_DISTANCE_KM} km")'
-                ).first
-                if opt.count() > 0:
-                    opt.click(timeout=2000)
-                    page.wait_for_timeout(600)
-                break
-            except Exception:
-                continue
+        _click_distance_option(page)
 
     try:
         page.wait_for_load_state("domcontentloaded", timeout=15000)
@@ -1511,14 +1648,50 @@ def apply_search_sort_and_distance(page):
     return state.get("sortOk") and state.get("distOk")
 
 
-def ensure_search_sort_and_distance(page):
-    """Ensure Most relevant sort and 100 km radius for every location search."""
+def reload_with_sort_and_distance_url(page, keywords_query, location, time_filter, start=0):
+    """Force distance=100 km (+ Most relevant) via search URL when UI clicks fail."""
+    for builder in (
+        build_job_search_results_url,
+        build_classic_job_search_url,
+    ):
+        try:
+            url = builder(keywords_query, location, time_filter, start=start)
+            if f"distance=" not in url and (location or "").strip():
+                sep = "&" if "?" in url else "?"
+                url = f"{url}{sep}distance={float(JOB_SEARCH_DISTANCE_KM)}"
+            if not open_page_with_retry(page, url, "applying 100 km distance via URL"):
+                continue
+            pause_search(page)
+            prepare_job_results_page(page)
+            if _search_sort_distance_ok(page).get("distOk"):
+                return True
+            if apply_search_sort_and_distance(page):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def ensure_search_sort_and_distance(
+    page, keywords_query="", location="", time_filter="", start=0
+):
+    """Ensure Most relevant sort and 100 km around the location for every search."""
     if apply_search_sort_and_distance(page):
         print(
             f"  Search preferences: Most relevant sort, "
-            f"{JOB_SEARCH_DISTANCE_KM} km radius."
+            f"{JOB_SEARCH_DISTANCE_KM} km around location."
         )
         return True
+
+    if keywords_query and (location or "").strip():
+        if reload_with_sort_and_distance_url(
+            page, keywords_query, location, time_filter, start=start
+        ):
+            print(
+                f"  Applied {JOB_SEARCH_DISTANCE_KM} km around location via search URL."
+            )
+            return True
+
     state = _search_sort_distance_ok(page)
     parts = []
     if state.get("sortOk"):
@@ -1530,7 +1703,7 @@ def ensure_search_sort_and_distance(page):
     else:
         print(
             f"  WARNING: Could not confirm sort={JOB_SEARCH_SORT_BY} / "
-            f"distance={JOB_SEARCH_DISTANCE_KM} km in UI."
+            f"distance={JOB_SEARCH_DISTANCE_KM} km around location."
         )
     return bool(state.get("sortOk") and state.get("distOk"))
 
@@ -1722,27 +1895,82 @@ def is_network_error(exc):
 
 
 def is_offline(page):
+    """True only when this PC cannot resolve the internet.
+
+    navigator.onLine stays true during many DNS failures, so do not use it alone.
+    """
+    if machine_has_internet():
+        return False
     try:
         return page.evaluate("navigator.onLine") is False
     except Exception:
+        return not machine_has_internet()
+
+
+def machine_has_internet(host="www.linkedin.com"):
+    import socket
+
+    previous = socket.getdefaulttimeout()
+    socket.setdefaulttimeout(5)
+    try:
+        socket.getaddrinfo(host, 443)
+        return True
+    except OSError:
         return False
+    finally:
+        socket.setdefaulttimeout(previous)
 
 
-def wait_until_online(page, max_seconds=180):
+# Wait this long for internet before saving Excel and stopping the scrape.
+OFFLINE_WAIT_SECONDS = 10 * 60
+
+
+def wait_until_online(page, max_seconds=None):
+    """Block until this PC can resolve the internet, or until timeout."""
+    max_seconds = OFFLINE_WAIT_SECONDS if max_seconds is None else int(max_seconds)
     waited = 0
+    print(
+        f"  Waiting for internet (up to {max_seconds // 60} min {max_seconds % 60}s)…"
+    )
     while waited < max_seconds:
         if stop_requested:
-            return
+            return False
+        if machine_has_internet():
+            print("  Connection restored. Retrying...")
+            return True
         try:
-            if page.evaluate("navigator.onLine"):
-                print("  Connection restored. Retrying...")
-                return
+            page.wait_for_timeout(2000)
         except Exception:
-            pass
-        page.wait_for_timeout(2000)
+            time.sleep(2)
         waited += 2
-        if waited % 10 == 0:
-            print(f"  ...still waiting for internet ({waited}s)")
+        if waited % 30 == 0:
+            print(f"  ...still waiting for internet ({waited}s / {max_seconds}s)")
+    return False
+
+
+def handle_offline_outage(page, context_msg):
+    """Wait up to 10 minutes for internet. On timeout: write Excel once and stop."""
+    global stop_requested
+    print(f"\n*** No internet — {context_msg} ***")
+    if wait_until_online(page, OFFLINE_WAIT_SECONDS):
+        return True
+
+    print(
+        "*** Still offline after 10 minutes — saving Excel and stopping scrape. ***",
+        flush=True,
+    )
+    stop_requested = True
+    progress["interrupted"] = True
+    sync_checkpoint_context(progress)
+    try:
+        save_checkpoint(progress)
+    except Exception:
+        pass
+    try:
+        flush_active_save(force_excel=True)
+    except Exception as exc:
+        print(f"*** Excel save error after offline timeout: {exc} ***", flush=True)
+    return False
 
 
 def open_page_with_retry(page, url, context_msg, max_quick_retries=5):
@@ -1764,6 +1992,25 @@ def open_page_with_retry(page, url, context_msg, max_quick_retries=5):
                 return False
 
             print(f"  Network error ({context_msg}): {exc}")
+            if machine_has_internet():
+                if attempt <= max_quick_retries + 3:
+                    wait_s = min(3 * attempt, 15)
+                    print(
+                        "  Your PC can reach the internet. LinkedIn failed to load in the "
+                        f"browser ({type(exc).__name__}). Retrying in {wait_s}s "
+                        f"(attempt {attempt})..."
+                    )
+                    try:
+                        page.wait_for_timeout(wait_s * 1000)
+                    except Exception:
+                        time.sleep(wait_s)
+                    continue
+                print(
+                    "  LinkedIn still will not open in the scraper browser, even though "
+                    "this PC looks online. Stop and start the scrape again."
+                )
+                return False
+
             if attempt <= max_quick_retries:
                 wait_s = min(2 * attempt, 12)
                 print(f"  Retrying in {wait_s}s (attempt {attempt}/{max_quick_retries})...")
@@ -1773,8 +2020,7 @@ def open_page_with_retry(page, url, context_msg, max_quick_retries=5):
                     time.sleep(wait_s)
                 continue
 
-            if persist_progress(f"No internet — {context_msg}"):
-                wait_until_online(page)
+            if handle_offline_outage(page, context_msg):
                 attempt = 0
                 continue
             return False
@@ -2387,33 +2633,81 @@ def scrape_job_by_id(
         mark_job_noticed(opened_job_id, saved_job_ids)
         return None
 
-    skip_kw, kw_reason = should_skip_for_keyword_mismatch(
-        keyword,
-        job_title=raw_job.get("job_title", ""),
-        description_text=raw_job.get("description_text", ""),
-        experience_raw=raw_job.get("experience_raw", ""),
-        strict_title=strict_title,
-        allow_experience_bypass=True,
-    )
-    if skip_kw:
-        print(f"  Skipping ({kw_reason}): {raw_job.get('job_title', '')[:60]}")
-        mark_job_noticed(opened_job_id, saved_job_ids)
-        return None
-    if kw_reason == "keyword optional (experience filter applies)":
+    scrape_mode = "job"
+    skills = []
+    target_exp = ""
+    min_skills_match = 1
+    try:
+        from job import config as _cfg
+
+        scrape_mode = (getattr(_cfg, "SCRAPE_MODE", None) or SCRAPE_MODE or "job").strip().lower()
+        skills = list(getattr(_cfg, "PERFECT_MATCH_SKILLS", None) or PERFECT_MATCH_SKILLS or [])
+        target_exp = (
+            getattr(_cfg, "PERFECT_MATCH_EXPERIENCE", None) or PERFECT_MATCH_EXPERIENCE or ""
+        )
+        min_skills_match = int(
+            getattr(_cfg, "PERFECT_MATCH_MIN_SKILLS", None) or PERFECT_MATCH_MIN_SKILLS or 1
+        )
+    except Exception:
+        scrape_mode = (SCRAPE_MODE or "job").strip().lower()
+        skills = list(PERFECT_MATCH_SKILLS or [])
+        target_exp = PERFECT_MATCH_EXPERIENCE or ""
+        min_skills_match = int(PERFECT_MATCH_MIN_SKILLS or 1)
+
+    if scrape_mode == "perfect_match":
+        # Keep/skip based on description skill count + experience — not single-skill keyword match.
+        skip, skip_reason = should_skip_for_perfect_match(
+            skills=skills,
+            target_experience=target_exp,
+            job_title=raw_job.get("job_title", ""),
+            description_text=raw_job.get("description_text", ""),
+            experience_raw=raw_job.get("experience_raw", ""),
+            min_skills_match=min_skills_match,
+        )
+        if skip:
+            print(f"  Skipping ({skip_reason}): {raw_job.get('job_title', '')[:60]}")
+            mark_job_noticed(opened_job_id, saved_job_ids)
+            return None
+        from job.job_filter import job_matches_skills
+
+        _ok, _reason, matched_n = job_matches_skills(
+            skills,
+            job_title=raw_job.get("job_title", ""),
+            description_text=raw_job.get("description_text", ""),
+            min_match=min_skills_match,
+        )
         print(
-            f"  Keyword optional (experience filter applies): "
+            f"  Skill match OK ({matched_n}/{len(skills)}, need {min_skills_match}): "
             f"{raw_job.get('job_title', '')[:60]}"
         )
+    else:
+        skip_kw, kw_reason = should_skip_for_keyword_mismatch(
+            keyword,
+            job_title=raw_job.get("job_title", ""),
+            description_text=raw_job.get("description_text", ""),
+            experience_raw=raw_job.get("experience_raw", ""),
+            strict_title=strict_title,
+            allow_experience_bypass=True,
+        )
+        if skip_kw:
+            print(f"  Skipping ({kw_reason}): {raw_job.get('job_title', '')[:60]}")
+            mark_job_noticed(opened_job_id, saved_job_ids)
+            return None
+        if kw_reason == "keyword optional (experience filter applies)":
+            print(
+                f"  Keyword optional (experience filter applies): "
+                f"{raw_job.get('job_title', '')[:60]}"
+            )
 
-    skip, skip_reason = should_skip_for_fresher_filter(
-        description_text=raw_job.get("description_text", ""),
-        job_title=raw_job.get("job_title", ""),
-        experience_raw=raw_job.get("experience_raw", ""),
-    )
-    if skip:
-        print(f"  Skipping ({skip_reason}): {raw_job.get('job_title', '')[:60]}")
-        mark_job_noticed(opened_job_id, saved_job_ids)
-        return None
+        skip, skip_reason = should_skip_for_fresher_filter(
+            description_text=raw_job.get("description_text", ""),
+            job_title=raw_job.get("job_title", ""),
+            experience_raw=raw_job.get("experience_raw", ""),
+        )
+        if skip:
+            print(f"  Skipping ({skip_reason}): {raw_job.get('job_title', '')[:60]}")
+            mark_job_noticed(opened_job_id, saved_job_ids)
+            return None
 
     job = normalize_job(raw_job)
     mark_job_noticed(
@@ -2604,14 +2898,13 @@ def scrape_results_page(
             )
         except Exception as exc:
             if is_offline(page) or is_network_error(exc):
-                if persist_progress(
-                    f"No internet — job {index + 1} of {card_count} on this page"
+                if handle_offline_outage(
+                    page,
+                    f"job {index + 1} of {card_count} on this page",
                 ):
-                    wait_until_online(page)
                     continue
-                print(f"  Network error on job {index + 1} — continuing.")
-                index += 1
-                continue
+                print(f"  Network error on job {index + 1} — stopping after offline wait.")
+                break
             print(f"  ERROR on job {index + 1} (continuing): {exc}")
             index += 1
             continue
@@ -2682,11 +2975,11 @@ def build_job_search_results_url(keywords_query, location, time_filter, start=0)
     location_query = format_location_query(location)
     if geo_id:
         params.append(f"geoId={geo_id}")
-        params.append(f"distance={float(JOB_SEARCH_DISTANCE_KM)}")
-        if location_query:
-            params.append(f"location={quote(location_query)}")
-    elif location_query:
+    if location_query:
         params.append(f"location={quote(location_query)}")
+    # Always request 100 km around the location when a place is set.
+    if geo_id or location_query:
+        params.append(f"distance={float(JOB_SEARCH_DISTANCE_KM)}")
     return "https://www.linkedin.com/jobs/search-results/?" + "&".join(params)
 
 
@@ -2703,11 +2996,10 @@ def build_classic_job_search_url(keywords_query, location, time_filter, start=0)
     location_query = format_location_query(location)
     if geo_id:
         params.append(f"geoId={geo_id}")
-        params.append(f"distance={float(JOB_SEARCH_DISTANCE_KM)}")
-        if location_query:
-            params.append(f"location={quote(location_query)}")
-    elif location_query:
+    if location_query:
         params.append(f"location={quote(location_query)}")
+    if geo_id or location_query:
+        params.append(f"distance={float(JOB_SEARCH_DISTANCE_KM)}")
     return "https://www.linkedin.com/jobs/search/?" + "&".join(params)
 
 
@@ -2821,7 +3113,13 @@ def scrape_keyword_search(page, keyword, location, saved_job_ids, start_page=0, 
                 time_filter=time_filter,
                 start=start,
             )
-            ensure_search_sort_and_distance(page)
+            ensure_search_sort_and_distance(
+                page,
+                keywords_query=keywords_query,
+                location=location,
+                time_filter=time_filter,
+                start=start,
+            )
             dismiss_job_search_overlays(page)
 
             if total_results is None:
@@ -2957,7 +3255,11 @@ def is_logged_in(page):
 
 
 def save_progress(jobs_this_run, today_store, write_excel=False):
-    """Merge jobs into today's JSON. Write Excel only when search stops/finishes."""
+    """Merge jobs into today's JSON.
+
+    Excel is written only on: scrape complete, explicit Stop, low-battery shutdown,
+    or offline for 10 minutes — never after each search/location.
+    """
     new_jobs = sort_jobs_newest_first(deduplicate_jobs(jobs_this_run))
     all_today_jobs = deduplicate_jobs(new_jobs + today_store["jobs"])
     today_store["jobs"] = all_today_jobs
@@ -2966,8 +3268,9 @@ def save_progress(jobs_this_run, today_store, write_excel=False):
     if not write_excel:
         if new_jobs:
             print(
-                f"  Saved {len(new_jobs)} job(s) to JSON "
-                f"({len(all_today_jobs)} total today). Excel is written when you stop."
+                f"  Checkpoint: {len(new_jobs)} new job(s) "
+                f"({len(all_today_jobs)} total today). "
+                "Excel is written only on finish / Stop / shutdown / 10-min offline."
             )
         return len(new_jobs), len(all_today_jobs)
 
@@ -2975,8 +3278,8 @@ def save_progress(jobs_this_run, today_store, write_excel=False):
     try:
         row_count = write_branded_excel(all_today_jobs, excel_path)
         print(
-            f"\nDaily Excel: {excel_path} - {len(new_jobs)} new this run, "
-            f"{len(all_today_jobs)} total today ({row_count} shown after filters)."
+            f"\nExcel saved: {excel_path} — {len(all_today_jobs)} job(s) today "
+            f"({row_count} shown after filters)."
         )
     except Exception as exc:
         from common.file_errors import friendly_file_error
@@ -2985,21 +3288,65 @@ def save_progress(jobs_this_run, today_store, write_excel=False):
             detail = friendly_file_error(exc, excel_path, "write")
         else:
             detail = f"Could not write Excel ({exc})"
-        print(f"\n*** {detail} ***")
-        print("  Today's JSON backup was saved. Close the Excel file and run again to refresh it.")
+        try:
+            print(f"\n*** {detail} ***")
+            print(
+                "  Today's JSON backup was saved. Close the Excel file and run again to refresh it."
+            )
+        except Exception:
+            pass
     return len(new_jobs), len(all_today_jobs)
 
 
-def resolve_start_progress():
+def refresh_runtime_search_config():
+    """Re-bind search lists from job.config after Django UI overrides."""
+    global JOB_KEYWORDS, LOCATIONS, MAX_JOB_AGE_HOURS, MAX_JOBS, MAX_PAGES
+    global SEARCH_MAX_DELAY, SEARCH_MIN_DELAY, RESULTS_PER_PAGE
+    global SKIP_SEARCHES, SKIP_PREVIOUS_JOBS, SCRAPE_MODE
+    global PERFECT_MATCH_SKILLS, PERFECT_MATCH_EXPERIENCE, PERFECT_MATCH_MIN_SKILLS
+    global JOB_SEARCH_DISTANCE_KM, JOB_SEARCH_SORT_BY
+    import job.config as cfg
+
+    JOB_KEYWORDS = list(getattr(cfg, "JOB_KEYWORDS", None) or [])
+    LOCATIONS = list(getattr(cfg, "LOCATIONS", None) or [])
+    MAX_JOB_AGE_HOURS = getattr(cfg, "MAX_JOB_AGE_HOURS", MAX_JOB_AGE_HOURS)
+    MAX_JOBS = getattr(cfg, "MAX_JOBS", MAX_JOBS)
+    MAX_PAGES = getattr(cfg, "MAX_PAGES", MAX_PAGES)
+    SEARCH_MAX_DELAY = getattr(cfg, "SEARCH_MAX_DELAY", SEARCH_MAX_DELAY)
+    SEARCH_MIN_DELAY = getattr(cfg, "SEARCH_MIN_DELAY", SEARCH_MIN_DELAY)
+    RESULTS_PER_PAGE = getattr(cfg, "RESULTS_PER_PAGE", RESULTS_PER_PAGE)
+    SKIP_SEARCHES = list(getattr(cfg, "SKIP_SEARCHES", None) or [])
+    SKIP_PREVIOUS_JOBS = bool(getattr(cfg, "SKIP_PREVIOUS_JOBS", False))
+    SCRAPE_MODE = (getattr(cfg, "SCRAPE_MODE", "job") or "job").strip().lower()
+    PERFECT_MATCH_SKILLS = list(getattr(cfg, "PERFECT_MATCH_SKILLS", None) or [])
+    PERFECT_MATCH_EXPERIENCE = str(getattr(cfg, "PERFECT_MATCH_EXPERIENCE", "") or "")
+    try:
+        PERFECT_MATCH_MIN_SKILLS = max(1, int(getattr(cfg, "PERFECT_MATCH_MIN_SKILLS", 1) or 1))
+    except (TypeError, ValueError):
+        PERFECT_MATCH_MIN_SKILLS = 1
+    try:
+        JOB_SEARCH_DISTANCE_KM = int(getattr(cfg, "JOB_SEARCH_DISTANCE_KM", JOB_SEARCH_DISTANCE_KM) or 100)
+    except (TypeError, ValueError):
+        JOB_SEARCH_DISTANCE_KM = 100
+    JOB_SEARCH_SORT_BY = str(getattr(cfg, "JOB_SEARCH_SORT_BY", JOB_SEARCH_SORT_BY) or "R")
+    return JOB_KEYWORDS, LOCATIONS
+
+
+def resolve_start_progress(allow_resume=True):
     global progress
     today = date.today().strftime("%Y-%m-%d")
     checkpoint = load_checkpoint()
+    refresh_runtime_search_config()
+    plan = search_plan_signature(JOB_KEYWORDS, LOCATIONS)
 
     if checkpoint.get("interrupted") and checkpoint.get("date") == today:
         context = checkpoint.get("context") or checkpoint_context(checkpoint)
-        plan = search_plan_signature()
-        if checkpoint.get("search_plan") and checkpoint.get("search_plan") != plan:
-            print("\nKeyword/location list changed since the last run.")
+        if (
+            not allow_resume
+            or (checkpoint.get("search_plan") and checkpoint.get("search_plan") != plan)
+        ):
+            if allow_resume:
+                print("\nKeyword/location list changed since the last run.")
             print("Starting a fresh scrape (previous checkpoint cleared).")
             clear_checkpoint()
             progress = default_checkpoint()
@@ -3020,12 +3367,14 @@ def resolve_start_progress():
     return "fresh"
 
 
-def run():
+def run(allow_resume=True):
     global stop_requested, progress
-    start_mode = resolve_start_progress()
+    refresh_runtime_search_config()
+    start_mode = resolve_start_progress(allow_resume=allow_resume)
     if start_mode == "exit":
         return
     resuming = start_mode == "resume"
+    refresh_runtime_search_config()
 
     with launch_browser(blocked_resource_types={"image", "media", "font"}) as (
         browser,
@@ -3053,7 +3402,8 @@ def run():
         excel_path = daily_excel_path()
         print(
             f"Daily JSON backup loaded ({already_saved_today} job(s) so far today). "
-            f"Excel will be written on stop/finish: {excel_path} "
+            f"Excel ({excel_path}) is written only when: scrape finishes, Stop, "
+            f"low-battery shutdown, or offline for 10 minutes "
             f"({previous_day_count} previous day file(s))."
         )
         previous_summary = summarize_known_jobs()
@@ -3095,6 +3445,23 @@ def run():
         pending_jobs = jobs_this_run
         _register_save_context(pending_jobs, today_store)
         _start_stop_watcher()
+        _start_battery_watcher()
+        try:
+            from common.battery_guard import (
+                format_status,
+                get_battery_status,
+                get_critical_percent,
+                set_critical_percent,
+            )
+
+            set_critical_percent(get_critical_percent())
+            threshold = get_critical_percent()
+            print(
+                f"Battery guard on: save Excel + shutdown if below {threshold}% and unplugged "
+                f"(now: {format_status(get_battery_status())})."
+            )
+        except Exception:
+            print("Battery guard on: save Excel + shutdown if below threshold and unplugged.")
         keyword_start, location_start, page_start = normalize_resume_indices(progress)
 
         def persist_job_batch(batch):
@@ -3169,24 +3536,20 @@ def run():
                             )
                             break
                         except Exception as exc:
-                            if is_network_error(exc) and network_attempts < 2:
+                            if is_network_error(exc) or is_offline(page):
                                 network_attempts += 1
-                                if persist_progress(
-                                    f"Network error during {keyword} | {location} "
-                                    f"(retry {network_attempts}/2)"
+                                if handle_offline_outage(
+                                    page,
+                                    f"{keyword} | {location}",
                                 ):
-                                    wait_until_online(page)
-                                    continue
-                            if is_network_error(exc):
-                                print(
-                                    f"  Network error persisted for {keyword} | {location} "
-                                    "— moving to next search."
-                                )
-                            else:
-                                import traceback
+                                    if network_attempts < 3:
+                                        continue
+                                # Offline timeout already saved Excel and set stop_requested.
+                                break
+                            import traceback
 
-                                print(f"  Keyword failed ({keyword} | {location}): {exc}")
-                                print(traceback.format_exc())
+                            print(f"  Keyword failed ({keyword} | {location}): {exc}")
+                            print(traceback.format_exc())
                             break
                     if stop_requested:
                         break
@@ -3195,6 +3558,7 @@ def run():
                 if stop_requested:
                     break
         finally:
+            _stop_battery_watcher()
             _stop_stop_watcher()
             flush_active_save(force_excel=True)
             if stop_requested or progress.get("interrupted"):
@@ -3206,9 +3570,15 @@ def run():
 
     if stop_requested:
         file_name = os.path.basename(daily_excel_path())
-        print(
-            f"\nStopped — progress saved. Check \"{file_name}\" in Output."
-        )
+        if _low_battery_triggered:
+            print(
+                f'\nLow-battery stop — jobs saved. Check "{file_name}" in Output. '
+                "Laptop shutdown was requested."
+            )
+        else:
+            print(
+                f"\nStopped — progress saved. Check \"{file_name}\" in Output."
+            )
     else:
         file_name = os.path.basename(daily_excel_path())
         print(f'\nScraping completed. Check "{file_name}" in Output.')

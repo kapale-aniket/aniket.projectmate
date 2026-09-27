@@ -16,7 +16,15 @@
   function buildFromForm(form) {
     if (!form) return [];
     var fd = new FormData(form);
+    var taskType = (form.getAttribute("data-task-type") || "").trim();
     var keywords = lines(fd.get("keywords"));
+    var skills = lines(fd.get("skills"));
+    // Perfect Match: one combined skills query × each location (not one search per skill).
+    if (taskType === "perfect_match" && skills.length) {
+      keywords = [skills.join(" ")];
+    } else if (!keywords.length && skills.length) {
+      keywords = [skills.join(" ")];
+    }
     var locations = lines(fd.get("locations"));
     if (!locations.length) locations = [""];
     var items = [];
@@ -137,7 +145,9 @@
     }
 
     refresh(true);
-    form.querySelectorAll('textarea[name="keywords"], textarea[name="locations"]').forEach(function (el) {
+    form.querySelectorAll(
+      'textarea[name="keywords"], textarea[name="locations"], textarea[name="skills"]'
+    ).forEach(function (el) {
       el.addEventListener("input", function () { refresh(true); });
     });
     return { refresh: refresh, getSkipSearches: function () { return getSkipSearches(list); } };
@@ -153,7 +163,9 @@
       if (to.type === "checkbox") to.checked = !!from.checked;
       else to.value = from.value;
     });
-    runForm.querySelectorAll('textarea[name="keywords"], textarea[name="locations"]').forEach(function (el) {
+    runForm.querySelectorAll(
+      'textarea[name="keywords"], textarea[name="locations"], textarea[name="skills"]'
+    ).forEach(function (el) {
       el.dispatchEvent(new Event("input", { bubbles: true }));
     });
   }

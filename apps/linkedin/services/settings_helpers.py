@@ -5,6 +5,7 @@ from apps.linkedin.services.config_service import (
     get_excel_format,
     normalize_cursor_settings,
     normalize_max_job_age_hours,
+    normalize_power_settings,
 )
 from apps.linkedin.services.excel_format_service import parse_excel_format_json
 from apps.linkedin.models import ScraperTask
@@ -37,6 +38,7 @@ def settings_to_form(app_settings, tab):
     conn = app_settings.get("connection", {})
     posts = app_settings.get("posts", {})
     browser = app_settings.get("browser", {})
+    power = app_settings.get("power", {})
     cursor = app_settings.get("cursor", {})
     return {
         "tab": tab,
@@ -59,6 +61,7 @@ def settings_to_form(app_settings, tab):
         "posts_max_scroll": posts.get("max_scroll_rounds", 30),
         "posts_max_posts": posts.get("max_posts_per_run", 0),
         "browser_headless": browser.get("headless_default", False),
+        "battery_shutdown_percent": power.get("shutdown_percent", 3),
         "cursor_enabled": cursor.get("enabled", True),
         "cursor_interval_seconds": cursor.get("interval_seconds", 60),
         "job_excel_format": json.dumps(job.get("excel_format", get_excel_format("job", app_settings))),
@@ -77,6 +80,7 @@ def form_to_settings(current, data):
     updated.setdefault("connection", {})
     updated.setdefault("posts", {})
     updated.setdefault("browser", {})
+    updated.setdefault("power", {})
     updated.setdefault("cursor", {})
 
     updated["job"].update(
@@ -131,6 +135,10 @@ def form_to_settings(current, data):
     tab = data.get("tab", "job")
     if tab == "browser":
         updated["browser"]["headless_default"] = bool(data.get("browser_headless"))
+        raw_pct = data.get("battery_shutdown_percent", 3)
+        if raw_pct in (None, ""):
+            raw_pct = 3
+        updated["power"] = normalize_power_settings({"shutdown_percent": raw_pct})
     if tab == "cursor":
         updated["cursor"] = normalize_cursor_settings(
             {
@@ -164,6 +172,27 @@ def persist_run_config_to_settings(task_type, config):
             job["max_job_age_hours"] = normalize_max_job_age_hours(config["max_job_age_hours"])
         if "skip_previous_jobs" in config:
             job["skip_previous_jobs"] = bool(config["skip_previous_jobs"])
+    elif task_type == ScraperTask.TASK_PERFECT_MATCH:
+        pm = app_settings.setdefault("perfect_match", {})
+        if config.get("skills"):
+            pm["skills"] = list(config["skills"])
+        if config.get("experience") is not None:
+            pm["experience"] = str(config["experience"]).strip()
+        if config.get("min_skills_match") is not None:
+            try:
+                pm["min_skills_match"] = max(1, int(config["min_skills_match"]))
+            except (TypeError, ValueError):
+                pm["min_skills_match"] = 1
+        if config.get("locations"):
+            pm["locations"] = list(config["locations"])
+        if config.get("max_pages") is not None:
+            pm["max_pages"] = int(config["max_pages"])
+        if config.get("max_jobs") is not None:
+            pm["max_jobs"] = int(config["max_jobs"])
+        if config.get("max_job_age_hours") is not None:
+            pm["max_job_age_hours"] = normalize_max_job_age_hours(config["max_job_age_hours"])
+        if "skip_previous_jobs" in config:
+            pm["skip_previous_jobs"] = bool(config["skip_previous_jobs"])
     elif task_type == ScraperTask.TASK_CONNECTION:
         conn = app_settings.setdefault("connection", {})
         if config.get("keywords"):
@@ -198,6 +227,27 @@ def apply_last_task_form_defaults(form, task_type):
     if task_type == ScraperTask.TASK_JOB:
         if cfg.get("keywords"):
             form.fields["keywords"].initial = "\n".join(cfg["keywords"])
+        if cfg.get("locations"):
+            form.fields["locations"].initial = "\n".join(cfg["locations"])
+        if cfg.get("max_pages") is not None:
+            form.fields["max_pages"].initial = cfg["max_pages"]
+        if cfg.get("max_jobs") is not None:
+            form.fields["max_jobs"].initial = cfg["max_jobs"]
+        if cfg.get("max_job_age_hours") is not None:
+            form.fields["max_job_age_hours"].initial = cfg["max_job_age_hours"]
+        if "skip_previous_jobs" in cfg:
+            form.fields["skip_previous_jobs"].initial = bool(cfg["skip_previous_jobs"])
+        if "resume" in cfg:
+            form.fields["resume"].initial = bool(cfg["resume"])
+    elif task_type == ScraperTask.TASK_PERFECT_MATCH:
+        if cfg.get("skills"):
+            form.fields["skills"].initial = "\n".join(cfg["skills"])
+        if cfg.get("experience") is not None:
+            saved_exp = str(cfg["experience"]).strip()
+            valid = {c[0] for c in form.fields["experience"].choices}
+            form.fields["experience"].initial = saved_exp if saved_exp in valid else "fresher"
+        if cfg.get("min_skills_match") is not None:
+            form.fields["min_skills_match"].initial = cfg["min_skills_match"]
         if cfg.get("locations"):
             form.fields["locations"].initial = "\n".join(cfg["locations"])
         if cfg.get("max_pages") is not None:

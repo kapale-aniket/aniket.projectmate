@@ -11,23 +11,26 @@ import sys
 
 def _configure_stdout_encoding():
     """Avoid UnicodeEncodeError on Windows cp1252 consoles."""
-    if hasattr(sys.stdout, "reconfigure"):
+    for stream_name in ("stdout", "stderr"):
+        stream = getattr(sys, stream_name, None)
+        if stream is None or not hasattr(stream, "reconfigure"):
+            continue
         try:
-            sys.stdout.reconfigure(encoding="utf-8", errors="replace")
-        except Exception:
-            pass
-    if hasattr(sys.stderr, "reconfigure"):
-        try:
-            sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+            stream.reconfigure(encoding="utf-8", errors="replace")
         except Exception:
             pass
 
 
 def _safe_write_print(original_print, *args, **kwargs):
+    """Never let console I/O crash the scraper (common on Windows pipes)."""
+    kwargs = dict(kwargs)
+    # Drop flush on first attempt if it tends to raise Errno 22 on broken pipes.
+    flush = bool(kwargs.pop("flush", False))
+
     try:
-        original_print(*args, **kwargs)
+        original_print(*args, flush=flush, **kwargs)
         return
-    except UnicodeEncodeError:
+    except (UnicodeEncodeError, OSError, ValueError, BrokenPipeError):
         pass
     except RecursionError:
         raise
@@ -35,10 +38,12 @@ def _safe_write_print(original_print, *args, **kwargs):
     file = kwargs.get("file", sys.stdout)
     text = " ".join(str(arg) for arg in args)
     end = kwargs.get("end", "\n")
+
+    # Retry without flush / with ASCII-safe text.
     try:
         encoding = getattr(file, "encoding", None) or "utf-8"
         safe = text.encode(encoding, errors="replace").decode(encoding, errors="replace")
-        original_print(safe, end=end, file=file, flush=kwargs.get("flush", False))
+        original_print(safe, end=end, file=file, flush=False)
         return
     except Exception:
         pass
@@ -47,8 +52,13 @@ def _safe_write_print(original_print, *args, **kwargs):
         buffer = getattr(file, "buffer", None)
         if buffer is not None:
             buffer.write((text + end).encode("utf-8", errors="replace"))
-            if kwargs.get("flush"):
-                buffer.flush()
+            return
+    except Exception:
+        pass
+
+    # Last resort: write to stderr, still never raise.
+    try:
+        sys.__stderr__.write(text + end)
     except Exception:
         pass
 
@@ -77,7 +87,10 @@ def _patch_print(task_id):
 
     @functools.wraps(original_print)
     def tee_print(*args, **kwargs):
-        _safe_write_print(original_print, *args, **kwargs)
+        try:
+            _safe_write_print(original_print, *args, **kwargs)
+        except Exception:
+            pass
         try:
             message = " ".join(str(arg) for arg in args)
             if not message.strip():

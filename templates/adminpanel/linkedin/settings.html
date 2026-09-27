@@ -5,7 +5,7 @@
 {% block content %}
 {% include "adminpanel/linkedin/_nav.html" %}
 {% csrf_token %}
-<div class="ap-card">
+<div class="ap-card li-scraper-page">
   <h2 class="h6 mb-3">LinkedIn automation settings</h2>
   {% if config_locked %}
   <div class="alert alert-warning py-2 small">{{ config_lock_message }}</div>
@@ -26,27 +26,27 @@
     {% if settings_tab == 'job' %}
     <div class="mb-3"><label class="form-label">Default keywords</label>{{ settings_form.job_keywords }}</div>
     <div class="mb-3"><label class="form-label">Default locations</label>{{ settings_form.job_locations }}</div>
-    <div class="row g-2 mb-3">
-      <div class="col-md-3"><label class="form-label">Max pages</label>{{ settings_form.job_max_pages }}</div>
-      <div class="col-md-3"><label class="form-label">Max jobs</label>{{ settings_form.job_max_jobs }}</div>
-      <div class="col-md-3"><label class="form-label">Job age (h)</label>{{ settings_form.job_max_age_hours }}</div>
-      <div class="col-md-3"><label class="form-label">Min delay</label>{{ settings_form.job_min_delay }}</div>
-      <div class="col-md-3"><label class="form-label">Max delay</label>{{ settings_form.job_max_delay }}</div>
+    <div class="li-num-grid">
+      <div><label class="form-label">Max pages</label>{{ settings_form.job_max_pages }}</div>
+      <div><label class="form-label">Max jobs</label>{{ settings_form.job_max_jobs }}</div>
+      <div><label class="form-label">Job age (h)</label>{{ settings_form.job_max_age_hours }}</div>
+      <div><label class="form-label">Min delay</label>{{ settings_form.job_min_delay }}</div>
+      <div><label class="form-label">Max delay</label>{{ settings_form.job_max_delay }}</div>
     </div>
     {% include "adminpanel/linkedin/_job_social_settings.html" %}
     {% include "adminpanel/linkedin/_excel_format_editor.html" with scraper_type="job" scraper_label="Job scraper" %}
     {% elif settings_tab == 'connection' %}
     <div class="mb-3"><label class="form-label">Default keywords</label>{{ settings_form.connection_keywords }}</div>
     <div class="mb-3"><label class="form-label">Default locations</label>{{ settings_form.connection_locations }}</div>
-    <div class="row g-2 mb-3">
-      <div class="col-md-4"><label class="form-label">Max connections</label>{{ settings_form.connection_max }}</div>
-      <div class="col-md-4"><label class="form-label">Max pages</label>{{ settings_form.connection_max_pages }}</div>
+    <div class="li-num-grid">
+      <div><label class="form-label">Max connections</label>{{ settings_form.connection_max }}</div>
+      <div><label class="form-label">Max pages</label>{{ settings_form.connection_max_pages }}</div>
     </div>
     {% include "adminpanel/linkedin/_excel_format_editor.html" with scraper_type="connection" scraper_label="Connection scraper" %}
     {% elif settings_tab == 'posts' %}
-    <div class="row g-2 mb-3">
-      <div class="col-md-4"><label class="form-label">Max scroll rounds</label>{{ settings_form.posts_max_scroll }}</div>
-      <div class="col-md-4"><label class="form-label">Max posts</label>{{ settings_form.posts_max_posts }}</div>
+    <div class="li-num-grid">
+      <div><label class="form-label">Max scroll rounds</label>{{ settings_form.posts_max_scroll }}</div>
+      <div><label class="form-label">Max posts</label>{{ settings_form.posts_max_posts }}</div>
     </div>
     {% include "adminpanel/linkedin/_excel_format_editor.html" with scraper_type="posts" scraper_label="Posts scraper" %}
     {% elif settings_tab == 'browser' %}
@@ -54,14 +54,33 @@
       {{ settings_form.browser_headless }}
       <label class="form-check-label" for="{{ settings_form.browser_headless.id_for_label }}">Headless by default (session login always shows a window)</label>
     </div>
+    <div class="li-num-grid mb-2">
+      <div>
+        <label class="form-label" for="id_battery_shutdown_percent">Low battery shutdown (%)</label>
+        <input
+          type="number"
+          name="battery_shutdown_percent"
+          id="id_battery_shutdown_percent"
+          class="form-control li-input-num"
+          min="1"
+          max="99"
+          step="1"
+          required
+          value="{{ settings_form.battery_shutdown_percent.value|default_if_none:3 }}"
+        >
+      </div>
+    </div>
+    <p class="small text-muted mb-3">If charger is unplugged and charge drops below this value during Jobs / Perfect Match, save Excel and shut down the PC. Default: 3.</p>
     {% elif settings_tab == 'cursor' %}
     <div class="form-check mb-3">
       {{ settings_form.cursor_enabled }}
       <label class="form-check-label" for="{{ settings_form.cursor_enabled.id_for_label }}">Keep screen awake while scraping</label>
     </div>
-    <div class="mb-3" style="max-width:200px">
-      <label class="form-label">Ping interval (seconds)</label>
-      {{ settings_form.cursor_interval_seconds }}
+    <div class="li-num-grid">
+      <div>
+        <label class="form-label">Ping interval (seconds)</label>
+        {{ settings_form.cursor_interval_seconds }}
+      </div>
     </div>
     {% endif %}
 

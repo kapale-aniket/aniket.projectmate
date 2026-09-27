@@ -153,6 +153,21 @@ def write_branded_excel(jobs, file_path, fmt=None):
     from apps.linkedin.services.excel_io import atomic_workbook_save
 
     fmt = fmt or load_excel_format("job")
+    fmt = dict(fmt)
+    try:
+        from job import config as cfg
+
+        sheet_title = (getattr(cfg, "SHEET_TITLE", "") or "").strip()
+        scrape_mode = (getattr(cfg, "SCRAPE_MODE", "") or "").strip().lower()
+        if scrape_mode == "perfect_match":
+            sheet_title = sheet_title or "skill match job"
+            fmt["sheet_name"] = "skill match job"
+            fmt["sheet_title"] = sheet_title
+        elif sheet_title:
+            fmt["sheet_title"] = sheet_title
+    except Exception:
+        pass
+
     jobs = keep_eligible_companies(jobs)
     zero_year, one_year = split_by_experience(jobs)
 
@@ -197,5 +212,10 @@ def write_branded_excel(jobs, file_path, fmt=None):
             yes_key="easy_apply",
         )
 
-    atomic_workbook_save(wb, file_path)
+    saved_path = atomic_workbook_save(wb, file_path)
+    if saved_path and str(saved_path) != str(file_path):
+        print(
+            f"  Excel target was locked — saved as: {saved_path} "
+            f"(close the open file to overwrite {file_path} next time)."
+        )
     return len(zero_year) + len(one_year)

@@ -3,6 +3,7 @@
   <a href="{% url 'linkedin:home' %}" class="{% if linkedin_nav == 'home' %}active{% endif %}"><i class="fas fa-gauge"></i> Overview</a>
   <a href="{% url 'linkedin:session' %}" class="{% if linkedin_nav == 'session' %}active{% endif %}"><i class="fas fa-key"></i> Session</a>
   <a href="{% url 'linkedin:jobs' %}" class="{% if linkedin_nav == 'job' or linkedin_nav == 'jobs' %}active{% endif %}"><i class="fas fa-briefcase"></i> Jobs</a>
+  <a href="{% url 'linkedin:perfect_match' %}" class="{% if linkedin_nav == 'perfect_match' %}active{% endif %}"><i class="fas fa-bullseye"></i> Perfect Match</a>
   <a href="{% url 'linkedin:connections' %}" class="{% if linkedin_nav == 'connection' or linkedin_nav == 'connections' %}active{% endif %}"><i class="fas fa-user-plus"></i> Connections</a>
   <a href="{% url 'linkedin:posts' %}" class="{% if linkedin_nav == 'posts' %}active{% endif %}"><i class="fas fa-newspaper"></i> Posts</a>
   <a href="{% url 'linkedin:output' %}" class="{% if linkedin_nav == 'output' %}active{% endif %}"><i class="fas fa-file-excel"></i> Output</a>

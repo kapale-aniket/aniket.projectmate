@@ -1,0 +1,107 @@
+{% extends "adminpanel/crm/_shell.html" %}
+{% block page_title %}CRM{% endblock %}
+{% block content %}
+{% include "adminpanel/crm/_nav.html" %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <a href="{% url 'crm:contacts' %}" class="ap-card ap-stat text-decoration-none d-block">
+      <div class="num">{{ contacts }}</div>
+      <div class="lbl">Contacts</div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="{% url 'crm:contacts' %}?added=month" class="ap-card ap-stat text-decoration-none d-block">
+      <div class="num">{{ new_contacts }}</div>
+      <div class="lbl">New today</div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="{% url 'crm:enquiries' %}" class="ap-card ap-stat text-decoration-none d-block">
+      <div class="num">{{ enquiry_counts.new }}</div>
+      <div class="lbl">New enquiries</div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a href="{% url 'crm:followups' %}?bucket=overdue" class="ap-card ap-stat text-decoration-none d-block">
+      <div class="num">{{ overdue }}</div>
+      <div class="lbl">Overdue follow-ups</div>
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="ap-card mb-3">
+      <h2 class="h6 mb-3">Quick start</h2>
+      <ol class="small text-muted mb-3 ps-3">
+        <li>Add a contact, or <strong>Import</strong> an Excel / CSV file.</li>
+        <li>Map columns and choose Skip, Update, or Merge for duplicates.</li>
+        <li>Open the person and add an enquiry, follow-up, or payment.</li>
+        <li>Export the filtered list as Excel, CSV, or a phone <strong>VCF</strong> file.</li>
+      </ol>
+      <div class="d-flex flex-wrap gap-2">
+        <a class="btn btn-ap btn-sm" href="{% url 'crm:contact_new' %}"><i class="fas fa-user-plus me-1"></i> Add contact</a>
+        <a class="btn btn-outline-primary btn-sm" href="{% url 'crm:import' %}"><i class="fas fa-file-import me-1"></i> Import</a>
+        <a class="btn btn-outline-primary btn-sm" href="{% url 'crm:enquiries' %}"><i class="fas fa-inbox me-1"></i> Enquiries</a>
+        <a class="btn btn-outline-primary btn-sm" href="{% url 'crm:followups' %}"><i class="fas fa-phone me-1"></i> Follow-ups</a>
+        <a class="btn btn-outline-secondary btn-sm" href="{% url 'crm:whatsapp' %}"><i class="fab fa-whatsapp me-1"></i> WhatsApp</a>
+      </div>
+    </div>
+    <div class="row g-3">
+      <div class="col-md-4">
+        <div class="ap-card h-100">
+          <h3 class="h6">Enquiries</h3>
+          <ul class="list-unstyled small mb-0">
+            <li>New — {{ enquiry_counts.new }}</li>
+            <li>Interested — {{ enquiry_counts.interested }}</li>
+            <li>Follow-up — {{ enquiry_counts.follow_up }}</li>
+            <li>Confirmed — {{ enquiry_counts.confirmed }}</li>
+            <li>Lost — {{ enquiry_counts.lost }}</li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="ap-card h-100">
+          <h3 class="h6">Work</h3>
+          <ul class="list-unstyled small mb-0">
+            <li>Active projects — {{ projects_active }}</li>
+            <li>Active testing — {{ testing_active }}</li>
+            <li>Open bugs — {{ bugs_open }}</li>
+            <li>Classes in progress — {{ class_students }}</li>
+            <li>Deadlines today — {{ deadlines }}</li>
+          </ul>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="ap-card h-100">
+          <h3 class="h6">Finance</h3>
+          <ul class="list-unstyled small mb-0">
+            <li>Received — {{ revenue }}</li>
+            <li>Pending — {{ pending_payments }}</li>
+            <li>Commission pending — {{ commission_pending }}</li>
+            <li>Imported contacts — {{ imported }}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="ap-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 mb-0">Today</h2>
+        <span class="badge text-bg-secondary">{{ today_followups|length }} follow-ups</span>
+      </div>
+      <div class="small text-muted mb-2">Calls and messages dated today.</div>
+      {% for item in today_followups %}
+      <div class="small border-bottom py-2">
+        <a class="fw-semibold text-decoration-none" href="{% url 'crm:contact_detail' item.contact_id %}">{{ item.contact.name }}</a>
+        <div class="text-muted">{{ item.get_channel_display }} — {{ item.notes|truncatechars:70 }}</div>
+      </div>
+      {% empty %}
+      <p class="small text-muted mb-0">No follow-ups dated today.</p>
+      {% endfor %}
+      <a class="btn btn-outline-secondary btn-sm mt-3" href="{% url 'crm:followups' %}">All follow-ups</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

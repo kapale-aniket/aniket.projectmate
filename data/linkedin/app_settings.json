@@ -132,15 +132,57 @@
       ]
     }
   },
+  "perfect_match": {
+    "skills": [
+      "Python",
+      "Django",
+      "Django REST Framework",
+      "REST APIs",
+      "SQL",
+      "MySQL",
+      "PostgreSQL",
+      "JavaScript",
+      "HTML",
+      "CSS",
+      "CRUD",
+      "Authentication",
+      "AJAX"
+    ],
+    "experience": "fresher",
+    "min_skills_match": 5,
+    "locations": [
+      "Bengaluru",
+      "Hyderabad",
+      "Pune",
+      "Mumbai",
+      "Chennai",
+      "Gurugram",
+      "Noida",
+      "Delhi",
+      "Kolkata",
+      "Ahmedabad",
+      "Kochi",
+      "Coimbatore",
+      "Chandigarh",
+      "Jaipur",
+      "Indore"
+    ],
+    "max_pages": 40,
+    "max_jobs": 0,
+    "max_job_age_hours": 24,
+    "skip_previous_jobs": false
+  },
   "connection": {
     "keywords": [
-      "team lead python"
+      "python team lead",
+      "hod computer science"
     ],
     "locations": [
       "pune",
-      "hyderabad"
+      "hyderabad",
+      "kolhapur"
     ],
-    "max_connections_per_run": 100,
+    "max_connections_per_run": 400,
     "max_pages": 500,
     "min_delay": 1,
     "max_delay": 2,
@@ -311,6 +353,9 @@
   "browser": {
     "headless_default": false,
     "block_images": true
+  },
+  "power": {
+    "shutdown_percent": 5
   },
   "output": {
     "file_prefix": "aniket_projectmate"

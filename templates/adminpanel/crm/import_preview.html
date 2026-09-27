@@ -1,0 +1,55 @@
+{% extends "adminpanel/crm/_shell.html" %}
+{% block page_title %}Import preview{% endblock %}
+{% block content %}
+{% include "adminpanel/crm/_nav.html" %}
+<div class="row g-3 li-scraper-page">
+  <div class="col-12">
+<div class="d-flex flex-wrap gap-3 mb-3 small">
+  <span>New {{ counts.new }}</span>
+  <span>Duplicates {{ counts.duplicate }}</span>
+  <span>Invalid {{ counts.invalid }}</span>
+</div>
+<form method="post">
+  {% csrf_token %}
+  <div class="ap-card table-responsive">
+    <table class="table ap-table mb-0">
+      <thead>
+        <tr><th>Row</th><th>Name</th><th>Mobile</th><th>College</th><th>Status</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for item in preview %}
+        <tr>
+          <td>{{ item.row }}</td>
+          <td>{{ item.data.name }}</td>
+          <td>{{ item.phone }}</td>
+          <td>{{ item.data.college }}</td>
+          <td>
+            {{ item.status }}
+            {% if item.existing_name %}<div class="text-muted">Matches {{ item.existing_name }}</div>{% endif %}
+            {% if item.reasons %}<div class="text-danger">{{ item.reasons|join:", " }}</div>{% endif %}
+          </td>
+          <td>
+            {% if item.status == "duplicate" %}
+            <select class="form-select form-select-sm" name="action_{{ item.row }}">
+              <option value="skip" selected>Skip</option>
+              <option value="update">Update</option>
+              <option value="merge">Merge</option>
+            </select>
+            {% elif item.status == "invalid" %}
+            <input type="hidden" name="action_{{ item.row }}" value="skip">
+            <span class="text-muted">Skip</span>
+            {% else %}
+            <input type="hidden" name="action_{{ item.row }}" value="create">
+            <span>Import</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <button class="btn btn-ap mt-3" type="submit">Confirm import</button>
+</form>
+  </div>
+</div>
+{% endblock %}

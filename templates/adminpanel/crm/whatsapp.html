@@ -1,0 +1,27 @@
+{% extends "adminpanel/crm/_shell.html" %}
+{% block page_title %}WhatsApp templates{% endblock %}
+{% block content %}
+{% include "adminpanel/crm/_nav.html" %}
+<p class="small text-muted">Placeholders: {name} {college} {project} {course} {date} {amount}. Open WhatsApp from a contact after choosing a template.</p>
+<div class="row g-3 li-scraper-page">
+  <div class="col-lg-5">
+    <div class="ap-card">
+      <h2 class="h6">New template</h2>
+      <form method="post">
+        {% csrf_token %}
+        <input class="form-control mb-2" name="name" placeholder="Name" required>
+        <textarea class="form-control mb-2" name="body" rows="5" placeholder="Hi {name}, ..." required></textarea>
+        <button class="btn btn-ap btn-sm" type="submit">Save template</button>
+      </form>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    {% for tmpl in templates %}
+    <div class="ap-card mb-2">
+      <div class="fw-semibold">{{ tmpl.name }}</div>
+      <pre class="small mb-0" style="white-space:pre-wrap">{{ tmpl.body }}</pre>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

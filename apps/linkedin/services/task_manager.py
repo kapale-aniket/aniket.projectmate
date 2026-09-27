@@ -58,6 +58,7 @@ def busy_task_message(task):
 def task_page_url(task_type):
     routes = {
         ScraperTask.TASK_JOB: "/admin/linkedin/jobs/",
+        ScraperTask.TASK_PERFECT_MATCH: "/admin/linkedin/perfect-match/",
         ScraperTask.TASK_CONNECTION: "/admin/linkedin/connections/",
         ScraperTask.TASK_POSTS: "/admin/linkedin/posts/",
         ScraperTask.TASK_SESSION: "/admin/linkedin/session/",
@@ -142,12 +143,13 @@ def _wait_for_process(process, pid, timeout_seconds=25):
 
 
 def _finalize_task_output(task):
-    if task.task_type != ScraperTask.TASK_JOB:
+    if task.task_type not in (ScraperTask.TASK_JOB, ScraperTask.TASK_PERFECT_MATCH):
         return
     try:
         from apps.linkedin.services.job_output_service import finalize_job_output
 
-        path = finalize_job_output()
+        scrape_mode = "perfect_match" if task.task_type == ScraperTask.TASK_PERFECT_MATCH else "job"
+        path = finalize_job_output(scrape_mode=scrape_mode)
         if path:
             TaskLog.objects.create(
                 task=task,
@@ -219,7 +221,7 @@ def start_task(task_type, config=None, run_in_background=True, resume=False):
 
     sync_to_automation_configs(load_settings())
 
-    if task_type == ScraperTask.TASK_JOB:
+    if task_type in (ScraperTask.TASK_JOB, ScraperTask.TASK_PERFECT_MATCH):
         try:
             from apps.linkedin.services.automation_path import ensure_automation_path
 
@@ -233,6 +235,38 @@ def start_task(task_type, config=None, run_in_background=True, resume=False):
     merged_config = dict(config or {})
     if resume:
         merged_config["resume"] = True
+    if task_type == ScraperTask.TASK_PERFECT_MATCH:
+        merged_config["scrape_mode"] = "perfect_match"
+        # Ensure automation config.py matches Perfect Match skills (not Jobs keywords).
+        skills = merged_config.get("skills") or []
+        if isinstance(skills, str):
+            skills = [s.strip() for s in skills.splitlines() if s.strip()]
+        locations = merged_config.get("locations") or []
+        if isinstance(locations, str):
+            locations = [s.strip() for s in locations.splitlines() if s.strip()]
+        search_query = " ".join(str(s).strip() for s in skills if str(s).strip())
+        if search_query:
+            merged_config["keywords"] = [search_query]
+            try:
+                from apps.linkedin.services.automation_path import ensure_automation_path
+
+                ensure_automation_path()
+                import job.config as job_cfg
+
+                job_cfg.JOB_KEYWORDS = [search_query]
+                job_cfg.LOCATIONS = list(locations) if locations else list(getattr(job_cfg, "LOCATIONS", []) or [])
+                job_cfg.SCRAPE_MODE = "perfect_match"
+                job_cfg.PERFECT_MATCH_SKILLS = list(skills)
+                job_cfg.PERFECT_MATCH_EXPERIENCE = str(merged_config.get("experience") or "")
+                try:
+                    job_cfg.PERFECT_MATCH_MIN_SKILLS = max(
+                        1, int(merged_config.get("min_skills_match") or 1)
+                    )
+                except (TypeError, ValueError):
+                    job_cfg.PERFECT_MATCH_MIN_SKILLS = 1
+                job_cfg.SHEET_TITLE = "skill match job"
+            except Exception:
+                pass
 
     task = ScraperTask.objects.create(
         task_type=task_type,

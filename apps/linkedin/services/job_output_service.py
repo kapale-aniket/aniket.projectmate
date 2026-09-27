@@ -153,59 +153,83 @@ def refresh_all_job_output_excel(include_merged=True, include_orphan_xlsx=True):
     }
 
 
-def finalize_job_output(day=None):
-    """Create or refresh today's Excel from the daily JSON backup."""
+def finalize_job_output(day=None, scrape_mode=None):
+    """Create or refresh today's Excel from the daily JSON backup.
+
+    scrape_mode: 'job' (default) or 'perfect_match' — selects file prefix / sheet title.
+    """
     ensure_automation_path()
-    from job.master_store import (
-        daily_excel_path,
-        daily_json_path,
-        ensure_daily_excel,
-        load_today_store,
-        purge_old_files,
-    )
-    from job.excel_writer import write_branded_excel
+    import job.config as cfg
+
+    previous_mode = getattr(cfg, "SCRAPE_MODE", "job")
+    previous_title = getattr(cfg, "SHEET_TITLE", "")
+    mode = (scrape_mode or previous_mode or "job").strip().lower()
+    cfg.SCRAPE_MODE = mode
+    if mode == "perfect_match":
+        cfg.SHEET_TITLE = "skill match job"
 
     try:
-        purge_old_files()
-    except Exception:
-        pass
+        from job.master_store import (
+            daily_excel_path,
+            daily_json_path,
+            ensure_daily_excel,
+            load_today_store,
+            purge_old_files,
+        )
+        from job.excel_writer import write_branded_excel
 
-    target_day = day or date.today()
-    store = load_today_store(target_day)
-    json_path = Path(daily_json_path(target_day))
-    excel_path = Path(daily_excel_path(target_day))
-
-    if store.get("jobs"):
-        if not json_path.is_file():
-            from job.master_store import save_today_store
-
-            save_today_store(store, target_day)
         try:
-            write_branded_excel(store["jobs"], str(excel_path))
-        except Exception:
-            try:
-                ensure_daily_excel(store, target_day)
-            except Exception:
-                if excel_path.is_file():
-                    return str(excel_path)
-                raise
-        return str(excel_path) if excel_path.is_file() else None
-
-    if excel_path.is_file():
-        return str(excel_path)
-
-    if json_path.is_file():
-        try:
-            ensure_daily_excel(store, target_day)
+            purge_old_files()
         except Exception:
             pass
+
+        target_day = day or date.today()
+        store = load_today_store(target_day)
+        json_path = Path(daily_json_path(target_day))
+        excel_path = Path(daily_excel_path(target_day))
+
+        if store.get("jobs"):
+            if not json_path.is_file():
+                from job.master_store import save_today_store
+
+                save_today_store(store, target_day)
+            try:
+                write_branded_excel(store["jobs"], str(excel_path))
+            except Exception:
+                try:
+                    ensure_daily_excel(store, target_day)
+                except Exception:
+                    if excel_path.is_file():
+                        return str(excel_path)
+                    raise
+            return str(excel_path) if excel_path.is_file() else None
+
         if excel_path.is_file():
             return str(excel_path)
 
-    return None
+        if json_path.is_file():
+            try:
+                ensure_daily_excel(store, target_day)
+            except Exception:
+                pass
+            if excel_path.is_file():
+                return str(excel_path)
+
+        return None
+    finally:
+        cfg.SCRAPE_MODE = previous_mode
+        cfg.SHEET_TITLE = previous_title
 
 
 def worker_env_extras():
-    return {
+    extras = {
         "TERRA_DATA_DIR": str(settings.LINKEDIN_DATA_DIR),
     }
+    try:
+        from apps.linkedin.services.config_service import load_settings, normalize_power_settings
+
+        power = normalize_power_settings(load_settings().get("power", {}))
+        extras["TERRA_BATTERY_SHUTDOWN_PERCENT"] = str(power.get("shutdown_percent", 3))
+    except Exception:
+        extras["TERRA_BATTERY_SHUTDOWN_PERCENT"] = "3"
+    return extras

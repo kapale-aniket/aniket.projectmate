@@ -20,9 +20,15 @@
         <div class="alert alert-warning py-2 small">{{ busy_task.task_type_label }} is active. <a href="{{ busy_task.task_url }}">Go there</a></div>
         {% endif %}
         <form id="liScraperForm" data-task-type="posts">
-          <div class="row g-2 mb-3">
-            <div class="col-6"><label class="form-label">Max scroll rounds</label>{{ form.max_scroll_rounds }}</div>
-            <div class="col-6"><label class="form-label">Max posts (0=all)</label>{{ form.max_posts_per_run }}</div>
+          <div class="li-num-grid">
+            <div>
+              <label class="form-label">Max scroll rounds</label>
+              {{ form.max_scroll_rounds }}
+            </div>
+            <div>
+              <label class="form-label">Max posts (0=all)</label>
+              {{ form.max_posts_per_run }}
+            </div>
           </div>
           <div class="li-action-grid">
             <button type="button" class="btn btn-ap" id="liStartTask" {% if other_task_busy %}disabled{% endif %}><i class="fas fa-play"></i><span>Start</span></button>
@@ -36,9 +42,9 @@
       <div id="liSettingsPanel" class="d-none">
         <form id="liSettingsForm" data-settings-tab="posts">
           {{ settings_form.posts_excel_format }}
-          <div class="row g-2 mb-3">
-            <div class="col-6"><label class="form-label">Default scroll rounds</label>{{ settings_form.posts_max_scroll }}</div>
-            <div class="col-6"><label class="form-label">Default max posts</label>{{ settings_form.posts_max_posts }}</div>
+          <div class="li-num-grid">
+            <div><label class="form-label">Default scroll rounds</label>{{ settings_form.posts_max_scroll }}</div>
+            <div><label class="form-label">Default max posts</label>{{ settings_form.posts_max_posts }}</div>
           </div>
           {% include "adminpanel/linkedin/_excel_format_editor.html" with scraper_type="posts" scraper_label="Posts scraper" %}
           <button type="button" class="btn btn-ap mt-3" id="liSaveSettings"><i class="fas fa-save me-1"></i> Save settings</button>

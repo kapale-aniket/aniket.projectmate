@@ -60,19 +60,55 @@
   padding: 1.25rem 1.25rem 0.5rem;
 }
 .ap-brand span { color: #9db4d1; }
-.ap-nav { padding: 1rem 0.75rem; display: flex; flex-direction: column; gap: 0.2rem; overflow-y: auto; }
-.ap-nav a {
+.ap-nav { padding: 0.75rem 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.2rem; overflow-y: auto; flex: 1; }
+.ap-nav a,
+.ap-menu__toggle {
   color: rgba(240, 244, 248, 0.88);
   text-decoration: none;
-  padding: 0.65rem 0.85rem;
+  padding: 0.6rem 0.85rem;
   border-radius: 0.65rem;
   font-weight: 500;
   font-size: 0.92rem;
   display: flex;
   align-items: center;
   gap: 0.65rem;
+  width: 100%;
+  background: transparent;
+  border: 0;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
 }
-.ap-nav a:hover, .ap-nav a.active { background: rgba(255,255,255,0.12); color: #fff; }
+.ap-nav a:hover, .ap-nav a.active,
+.ap-menu__toggle:hover,
+.ap-menu.has-active > .ap-menu__toggle,
+.ap-menu.is-open > .ap-menu__toggle { background: rgba(255,255,255,0.12); color: #fff; }
+.ap-menu { display: flex; flex-direction: column; }
+.ap-menu__chevron {
+  margin-left: auto;
+  font-size: 0.68rem;
+  opacity: 0.7;
+  transition: transform 0.16s ease;
+}
+.ap-menu:hover > .ap-menu__toggle .ap-menu__chevron,
+.ap-menu.is-open > .ap-menu__toggle .ap-menu__chevron { transform: rotate(90deg); }
+.ap-submenu {
+  display: none;
+  flex-direction: column;
+  gap: 0.08rem;
+  margin: 0.15rem 0 0.35rem 0.7rem;
+  padding-left: 0.55rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+.ap-menu:hover > .ap-submenu,
+.ap-menu.is-open > .ap-submenu,
+.ap-menu.has-active > .ap-submenu { display: flex; }
+.ap-submenu a {
+  font-size: 0.86rem;
+  font-weight: 500;
+  padding: 0.42rem 0.7rem;
+}
+.ap-submenu a.active { background: rgba(255, 255, 255, 0.16); }
 .ap-main { flex: 1; min-width: 0; }
 .ap-topbar {
   background: var(--ap-topbar-bg);
@@ -1091,7 +1127,7 @@ button.ap-quick { width: 100%; text-align: left; cursor: pointer; }
 @media (max-width: 992px) {
   .ap-shell { flex-direction: column; }
   .ap-sidebar { width: 100%; height: auto; position: relative; }
-  .ap-nav { flex-direction: row; flex-wrap: wrap; }
+  .ap-nav { flex-direction: column; flex-wrap: nowrap; max-height: 70vh; }
 }
 
 .ap-social-toggles {

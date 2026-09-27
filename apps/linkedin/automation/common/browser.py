@@ -55,7 +55,12 @@ def launch_browser(
     blocked_types = set(blocked_resource_types)
 
     with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=headless)
+        browser = playwright.chromium.launch(
+            headless=headless,
+            args=[
+                "--disable-features=AsyncDns,UseDnsHttpsSvcbAlpn",
+            ],
+        )
         # Playwright accepts either a path to a storage file or a dict. If the
         # provided path does not exist, pass an empty dict so Playwright won't
         # attempt to open a missing file and raise FileNotFoundError.

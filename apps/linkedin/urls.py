@@ -6,6 +6,7 @@ app_name = "linkedin"
 urlpatterns = [
     path("", views.linkedin_home, name="home"),
     path("jobs/", views.job_scraper, name="jobs"),
+    path("perfect-match/", views.perfect_match_scraper, name="perfect_match"),
     path("connections/", views.connection_scraper, name="connections"),
     path("posts/", views.posts_scraper, name="posts"),
     path("session/", views.session_manager, name="session"),

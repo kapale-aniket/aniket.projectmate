@@ -1,0 +1,115 @@
+{% extends "adminpanel/crm/_shell.html" %}
+{% block page_title %}Import contacts{% endblock %}
+{% block content %}
+{% include "adminpanel/crm/_nav.html" %}
+<div class="row g-3 li-scraper-page">
+  <div class="col-lg-5">
+    <div class="ap-card">
+      <h2 class="h6 mb-1">Upload spreadsheet</h2>
+      <p class="small text-muted mb-3">Excel .xlsx, .xls, or CSV. The contact count appears here before you map columns.</p>
+      <form id="crmImportForm" method="post" enctype="multipart/form-data" action="{% url 'crm:import' %}">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label">File</label>
+          <input class="form-control" type="file" name="file" id="crmImportFile" accept=".csv,.xlsx,.xls" required>
+        </div>
+        <div id="crmImportCount" class="ap-card border mb-3 d-none" style="background: var(--ap-bg-soft, #f8fafc);">
+          <div class="small text-muted" id="crmImportName"></div>
+          <div class="d-flex align-items-end justify-content-between gap-2 mt-1">
+            <div>
+              <div class="num" id="crmImportTotal" style="font-family: Fraunces, Georgia, serif; font-size: 2rem; color: var(--ap-stat-num, #1a365d);">0</div>
+              <div class="small text-muted">contacts in this file</div>
+            </div>
+            <a class="btn btn-ap btn-sm" id="crmImportMap" href="#">Map columns</a>
+          </div>
+        </div>
+        <p class="small text-danger mb-2 d-none" id="crmImportError"></p>
+        <button class="btn btn-outline-secondary w-100" type="submit" id="crmImportFallback"><i class="fas fa-file-import me-1"></i> Continue without preview</button>
+      </form>
+      <ol class="small text-muted mt-3 mb-0 ps-3">
+        <li>Choose a file — the total shows on this page</li>
+        <li>Map columns</li>
+        <li>Preview duplicates</li>
+        <li>Confirm import</li>
+      </ol>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="ap-card">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h2 class="h6 mb-0">Recent imports</h2>
+        <span class="badge text-bg-secondary">{{ batches|length }}</span>
+      </div>
+      {% for batch in batches %}
+      <div class="li-recent-output-item">
+        <a class="li-output-file-link" href="{% if batch.total_rows and batch.status == 'uploaded' %}{% url 'crm:import_map' batch.pk %}{% else %}{% url 'crm:import_result' batch.pk %}{% endif %}">{{ batch.original_name }}</a>
+        {% if batch.total_rows %}<span class="small text-muted">{{ batch.total_rows }} contacts</span>{% endif %}
+        <span class="badge text-bg-light border">{{ batch.get_status_display }}</span>
+        <span class="small text-muted">{{ batch.created_at|date:"d M" }}</span>
+      </div>
+      {% empty %}
+      <p class="small text-muted mb-0">No imports yet.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  var input = document.getElementById("crmImportFile");
+  var box = document.getElementById("crmImportCount");
+  var totalEl = document.getElementById("crmImportTotal");
+  var nameEl = document.getElementById("crmImportName");
+  var mapLink = document.getElementById("crmImportMap");
+  var errorEl = document.getElementById("crmImportError");
+  var fallback = document.getElementById("crmImportFallback");
+  var tokenEl = document.querySelector("#crmImportForm [name=csrfmiddlewaretoken]");
+  var batchId = "";
+  if (!input) return;
+  input.addEventListener("change", function () {
+    var file = input.files && input.files[0];
+    errorEl.classList.add("d-none");
+    if (!file) {
+      box.classList.add("d-none");
+      return;
+    }
+    nameEl.textContent = file.name;
+    totalEl.textContent = "…";
+    box.classList.remove("d-none");
+    mapLink.classList.add("disabled");
+    mapLink.setAttribute("aria-disabled", "true");
+    var body = new FormData();
+    body.append("file", file);
+    body.append("csrfmiddlewaretoken", tokenEl ? tokenEl.value : "");
+    if (batchId) body.append("replace_id", batchId);
+    fetch("{% url 'crm:import_count' %}", {
+      method: "POST",
+      headers: { "X-CSRFToken": tokenEl ? tokenEl.value : "", "X-Requested-With": "XMLHttpRequest" },
+      body: body,
+      credentials: "same-origin"
+    }).then(function (res) {
+      return res.json().then(function (data) { return { ok: res.ok, data: data }; });
+    }).then(function (result) {
+      if (!result.ok || !result.data.ok) {
+        box.classList.add("d-none");
+        errorEl.textContent = (result.data && result.data.message) || "Could not read that file.";
+        errorEl.classList.remove("d-none");
+        return;
+      }
+      batchId = String(result.data.batch_id);
+      totalEl.textContent = result.data.total;
+      nameEl.textContent = result.data.name;
+      mapLink.href = result.data.map_url;
+      mapLink.classList.remove("disabled");
+      mapLink.removeAttribute("aria-disabled");
+      fallback.classList.add("d-none");
+    }).catch(function () {
+      box.classList.add("d-none");
+      errorEl.textContent = "Could not read that file.";
+      errorEl.classList.remove("d-none");
+    });
+  });
+})();
+</script>
+{% endblock %}

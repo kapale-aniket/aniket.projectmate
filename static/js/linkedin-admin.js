@@ -84,7 +84,9 @@
         restored = true;
       });
       if (restored) {
-        form.querySelectorAll('textarea[name="keywords"], textarea[name="locations"]').forEach(function (el) {
+        form.querySelectorAll(
+          'textarea[name="keywords"], textarea[name="locations"], textarea[name="skills"]'
+        ).forEach(function (el) {
           el.dispatchEvent(new Event("input", { bubbles: true }));
         });
       }
@@ -129,6 +131,33 @@
         skip_previous_jobs: !!fd.get("skip_previous_jobs"),
         headless: true,
         skip_searches: skip,
+      };
+    }
+    if (taskType === "perfect_match") {
+      var pmSkip = [];
+      if (window.PMScraperChecklist) {
+        pmSkip = PMScraperChecklist.getSkipSearches(document.getElementById("liChecklist"));
+      }
+      var skillList = lines(fd.get("skills"));
+      var minMatch = parseInt(fd.get("min_skills_match") || "1", 10);
+      if (!minMatch || minMatch < 1) minMatch = 1;
+      if (skillList.length && minMatch > skillList.length) minMatch = skillList.length;
+      var searchQuery = skillList.join(" ").trim();
+      return {
+        skills: skillList,
+        experience: String(fd.get("experience") || "fresher").trim() || "fresher",
+        min_skills_match: minMatch,
+        // One LinkedIn query with all skills; locations are searched one-by-one.
+        keywords: searchQuery ? [searchQuery] : [],
+        locations: lines(fd.get("locations")),
+        max_pages: parseInt(fd.get("max_pages") || "40", 10),
+        max_jobs: parseInt(fd.get("max_jobs") || "0", 10),
+        max_job_age_hours: parseInt(fd.get("max_job_age_hours") || "24", 10),
+        resume: !!fd.get("resume"),
+        skip_previous_jobs: !!fd.get("skip_previous_jobs"),
+        headless: true,
+        scrape_mode: "perfect_match",
+        skip_searches: pmSkip,
       };
     }
     if (taskType === "connection") {
@@ -206,18 +235,25 @@
       data.status === "paused" ||
       data.status === "pending"
     );
-    renderChecklist(data.search_checklist, taskActive);
+    renderChecklist(data.search_checklist, taskActive, data.task_type);
   }
 
-  function renderChecklist(items, taskActive) {
+  function renderChecklist(items, taskActive, serverTaskType) {
     var panel = document.getElementById("liChecklistPanel");
     var list = document.getElementById("liChecklist");
     var count = document.getElementById("liChecklistCount");
     if (!window.PMScraperChecklist) return;
     var form = document.getElementById("liScraperForm");
+    var pageType = (form && form.getAttribute("data-task-type")) || "";
     var local = PMScraperChecklist.buildFromForm(form);
     var checkState = PMScraperChecklist.getLocalCheckState(list);
-    var merged = items && items.length
+    // Only merge live server queue when the active task matches this page.
+    var canMerge =
+      taskActive &&
+      items &&
+      items.length &&
+      (!serverTaskType || !pageType || serverTaskType === pageType);
+    var merged = canMerge
       ? PMScraperChecklist.mergeServerItems(local, items)
       : local;
     merged.forEach(function (item) {
@@ -226,7 +262,7 @@
         item.checked = checkState[key];
       }
     });
-    var liveSkip = !!taskActive;
+    var liveSkip = !!taskActive && canMerge;
     PMScraperChecklist.render(list, count, panel, merged, {
       interactive: true,
       liveSkip: liveSkip,
@@ -758,6 +794,14 @@
           if (!data || !data.id) {
             setText("liTaskMeta", "Idle");
             toggleControls("");
+            renderChecklist(null, false, taskType);
+            return;
+          }
+          // Ignore other scrapers' status on this page (prevents wrong keyword queue).
+          if (taskType && data.task_type && data.task_type !== taskType && !currentTaskId) {
+            setText("liTaskMeta", "Idle");
+            toggleControls("");
+            renderChecklist(null, false, taskType);
             return;
           }
           currentTaskId = data.id;
@@ -790,8 +834,18 @@
           poll();
         })
         .catch(function (err) {
-          toast(err.message || "Failed to start", false);
-          appendLog("ERROR: " + (err.message || "Failed"));
+          var detail = err.message || "Failed to start";
+          if (err.payload && err.payload.errors) {
+            var parts = [];
+            Object.keys(err.payload.errors).forEach(function (key) {
+              var msgs = err.payload.errors[key];
+              if (Array.isArray(msgs)) parts.push(key + ": " + msgs.join(", "));
+              else if (msgs) parts.push(key + ": " + msgs);
+            });
+            if (parts.length) detail = parts.join(" | ");
+          }
+          toast(detail, false);
+          appendLog("ERROR: " + detail);
         });
     }
 

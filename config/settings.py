@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "apps.adminpanel.apps.AdminpanelConfig",
     "apps.linkedin.apps.LinkedinConfig",
     "apps.naukri.apps.NaukriConfig",
+    "apps.crm.apps.CrmConfig",
 ]
 
 MIDDLEWARE = [

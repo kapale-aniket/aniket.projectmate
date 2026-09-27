@@ -1,0 +1,30 @@
+{% extends "adminpanel/crm/_shell.html" %}
+{% block page_title %}Map columns{% endblock %}
+{% block content %}
+{% include "adminpanel/crm/_nav.html" %}
+<div class="row g-3 li-scraper-page">
+  <div class="col-lg-8">
+    <div class="ap-card">
+      <h2 class="h6 mb-1">Map columns</h2>
+      <p class="small text-muted mb-3">{{ batch.original_name }} · {{ batch.total_rows }} contact{{ batch.total_rows|pluralize }} in this file. Unmapped fields are ignored.</p>
+      <form method="post">
+        {% csrf_token %}
+        {% for field, label, selected in mapped_fields %}
+        <div class="row g-2 align-items-center mb-2">
+          <div class="col-5"><label class="form-label mb-0">{{ label }}</label></div>
+          <div class="col-7">
+            <select class="form-select" name="map_{{ field }}">
+              <option value="">— skip —</option>
+              {% for idx, header in columns %}
+              <option value="{{ idx }}" {% if selected == idx|stringformat:"s" %}selected{% endif %}>{{ header }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        {% endfor %}
+        <button class="btn btn-ap mt-2" type="submit">Preview duplicates</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

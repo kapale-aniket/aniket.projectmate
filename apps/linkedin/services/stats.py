@@ -450,18 +450,22 @@ def dashboard_stats():
     }
 
 
-def get_latest_job_output_file():
-    """Most recent daily job Excel output (aniket_projectmate_*.xlsx)."""
-    recent = list_recent_job_output_files(limit=1)
+def get_latest_job_output_file(prefix=None):
+    """Most recent daily job Excel output for the given prefix."""
+    recent = list_recent_job_output_files(limit=1, prefix=prefix)
     return recent[0] if recent else None
 
 
-def list_recent_job_output_files(limit=8):
+def list_recent_job_output_files(limit=8, prefix=None):
     """Recent job Excel outputs for quick links on the scraper page."""
+    prefix = (prefix or "aniket_projectmate").strip().lower()
+    type_label = "Skill Match Job" if prefix == "skill_match_job" else "Job Data"
     files = [
         f
         for f in list_output_files()
-        if f.get("type") == "Job Data" and str(f.get("name", "")).lower().endswith(".xlsx")
+        if f.get("type") == type_label
+        and str(f.get("name", "")).lower().endswith(".xlsx")
+        and str(f.get("name", "")).lower().startswith(prefix)
     ]
     return files[:limit]
 
@@ -502,14 +506,14 @@ def list_output_files():
     files = []
     root = _automation_root()
 
-    # Auto-purge job outputs older than 48 hours whenever Output is listed.
+    # Auto-purge job outputs (48h normal / 24h skill_match) whenever Output is listed.
     try:
         from apps.linkedin.services.automation_path import ensure_automation_path
 
         ensure_automation_path()
         from job.master_store import purge_old_files
 
-        purge_old_files(retention_hours=48)
+        purge_old_files()
     except Exception:
         pass
 
@@ -524,6 +528,7 @@ def list_output_files():
 
     patterns = [
         (root / "job" / "output", "aniket_projectmate_*.xlsx", "Job Data"),
+        (root / "job" / "output", "skill_match_job_*.xlsx", "Skill Match Job"),
         (root / "job" / "output", "merged_*.xlsx", "Job Data (Merged)"),
         (root / "posts" / "output", "hiring_posts_*.xlsx", "Posts"),
         (root / "job" / "output", "merged_*.csv", "Job Data (Merged)"),

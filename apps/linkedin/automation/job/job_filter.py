@@ -280,6 +280,138 @@ def should_skip_for_fresher_filter(description_text="", job_title="", experience
     return True, "experience not fresher-friendly (allowed: fresher / 0 / 0-1 / 0-2 years)"
 
 
+def _normalize_skill_token(skill):
+    return re.sub(r"\s+", " ", (skill or "").strip().lower())
+
+
+def job_matches_skills(
+    skills,
+    job_title="",
+    description_text="",
+    require_all=True,
+    min_match=None,
+):
+    """Return (ok, reason, matched_count).
+
+    min_match: keep when at least this many skills appear in title/description.
+    When min_match is set it overrides require_all.
+    """
+    skills = [_normalize_skill_token(s) for s in (skills or []) if _normalize_skill_token(s)]
+    if not skills:
+        return True, "", 0
+
+    haystack = f"{job_title or ''} {description_text or ''}".lower()
+    missing = []
+    matched = []
+    for skill in skills:
+        # Phrase match first; also allow compact form (e.g. "machine learning" / "machinelearning").
+        compact = skill.replace(" ", "")
+        if skill in haystack or (compact and compact in haystack.replace(" ", "")):
+            matched.append(skill)
+        else:
+            missing.append(skill)
+
+    matched_count = len(matched)
+    if min_match is not None:
+        needed = max(1, min(int(min_match), len(skills)))
+        if matched_count >= needed:
+            return True, "", matched_count
+        return (
+            False,
+            f"matched {matched_count}/{len(skills)} skills (need at least {needed})",
+            matched_count,
+        )
+
+    if require_all:
+        if missing:
+            return False, f"missing skills: {', '.join(missing)}", matched_count
+        return True, "", matched_count
+
+    if matched:
+        return True, "", matched_count
+    return False, f"does not match skills: {', '.join(skills)}", matched_count
+
+
+def experience_overlaps_target(experience_raw="", target_experience=""):
+    """True when job experience overlaps the user target band (or job has no years)."""
+    target = (target_experience or "").strip()
+    if not target:
+        return True
+
+    target_l = target.lower().replace("–", "-").strip()
+
+    # Fresher / 0-1 / 0-2 style targets.
+    if target_l in {"fresher", "0-1", "0-2"} or any(
+        k in target_l for k in ("fresher", "entry", "0 year", "0-1", "0-2")
+    ):
+        if not description_mentions_experience("", experience_raw):
+            return True
+        return is_fresher_friendly_experience("", experience_raw)
+
+    job_norm = normalize_experience_required(experience_raw or "")
+    if not job_norm or job_norm == EMPTY:
+        # Unspecified experience: keep only for junior-ish targets, not "more than 1".
+        if target_l in {"more than 1 year", "more than 1"} or target_l.isdigit():
+            return False
+        return True
+
+    j_low, j_high = experience_bounds(job_norm)
+    j_lo = j_low if j_low is not None else 0
+    j_hi = j_high if j_high is not None else j_lo
+
+    # Exact year picks: 1 / 2 / 3 / 4 / 5
+    if target_l.isdigit():
+        year = int(target_l)
+        return j_lo <= year <= j_hi or j_lo == year or j_hi == year
+
+    # More than 1 year
+    if "more than 1" in target_l:
+        return j_lo > 1 or (j_lo >= 1 and j_hi > 1)
+
+    target_norm = normalize_experience_required(target)
+    t_low, t_high = experience_bounds(target_norm if target_norm != EMPTY else target)
+    if t_low is None and t_high is None:
+        return True
+
+    t_lo = t_low if t_low is not None else 0
+    t_hi = t_high if t_high is not None else t_lo
+    return j_lo <= t_hi and j_hi >= t_lo
+
+
+def should_skip_for_perfect_match(
+    skills=None,
+    target_experience="",
+    job_title="",
+    description_text="",
+    experience_raw="",
+    min_skills_match=1,
+):
+    """Return (skip, reason) for Perfect Match mode: skills + experience."""
+    if has_senior_level_words(job_title or ""):
+        return True, "senior-level title"
+    if experience_raw and has_senior_level_words(experience_raw):
+        return True, "senior-level experience line"
+
+    try:
+        min_match = int(min_skills_match or 1)
+    except (TypeError, ValueError):
+        min_match = 1
+
+    ok, reason, _matched = job_matches_skills(
+        skills,
+        job_title=job_title,
+        description_text=description_text,
+        min_match=min_match,
+    )
+    if not ok:
+        return True, reason
+
+    if not experience_overlaps_target(experience_raw, target_experience):
+        return True, f"experience does not match target '{target_experience}'"
+
+    return False, ""
+
+
 KEYWORD_STOPWORDS = {
     "a",
     "an",

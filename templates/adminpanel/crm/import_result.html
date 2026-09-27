@@ -1,0 +1,19 @@
+{% extends "adminpanel/crm/_shell.html" %}
+{% block page_title %}Import result{% endblock %}
+{% block content %}
+{% include "adminpanel/crm/_nav.html" %}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3"><div class="ap-card ap-stat"><div class="num">{{ batch.total_rows }}</div><div class="lbl">Total rows</div></div></div>
+  <div class="col-6 col-md-3"><div class="ap-card ap-stat"><div class="num">{{ batch.imported_count }}</div><div class="lbl">Imported</div></div></div>
+  <div class="col-6 col-md-2"><div class="ap-card ap-stat"><div class="num">{{ batch.updated_count }}</div><div class="lbl">Updated</div></div></div>
+  <div class="col-6 col-md-2"><div class="ap-card ap-stat"><div class="num">{{ batch.duplicate_count }}</div><div class="lbl">Duplicates</div></div></div>
+  <div class="col-6 col-md-2"><div class="ap-card ap-stat"><div class="num">{{ batch.invalid_count }}</div><div class="lbl">Invalid</div></div></div>
+</div>
+<div class="ap-card">
+  <h2 class="h6 mb-2">{{ batch.original_name }}</h2>
+  <div class="d-flex flex-wrap gap-2">
+    <a class="btn btn-outline-secondary btn-sm" href="{% url 'crm:import_errors' batch.pk %}">Download error report</a>
+    <a class="btn btn-ap btn-sm" href="{% url 'crm:contacts' %}">View contacts</a>
+  </div>
+</div>
+{% endblock %}

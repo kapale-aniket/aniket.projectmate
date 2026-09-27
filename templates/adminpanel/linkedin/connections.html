@@ -22,9 +22,15 @@
         <form id="liScraperForm" data-task-type="connection">
           <div class="mb-3"><label class="form-label">Keywords</label>{{ form.keywords }}</div>
           <div class="mb-3"><label class="form-label">Locations</label>{{ form.locations }}</div>
-          <div class="row g-2 mb-3">
-            <div class="col-6"><label class="form-label">Max per run</label>{{ form.max_connections_per_run }}</div>
-            <div class="col-6"><label class="form-label">Max pages</label>{{ form.max_pages }}</div>
+          <div class="li-num-grid">
+            <div>
+              <label class="form-label">Max per run</label>
+              {{ form.max_connections_per_run }}
+            </div>
+            <div>
+              <label class="form-label">Max pages</label>
+              {{ form.max_pages }}
+            </div>
           </div>
           <div class="li-action-grid">
             <button type="button" class="btn btn-ap" id="liStartTask" {% if other_task_busy %}disabled{% endif %}><i class="fas fa-play"></i><span>Start</span></button>
@@ -38,9 +44,9 @@
       <div id="liSettingsPanel" class="d-none">
         <form id="liSettingsForm" data-settings-tab="connection">
           {{ settings_form.connection_excel_format }}
-          <div class="row g-2 mb-3">
-            <div class="col-6"><label class="form-label">Default max connections</label>{{ settings_form.connection_max }}</div>
-            <div class="col-6"><label class="form-label">Default max pages</label>{{ settings_form.connection_max_pages }}</div>
+          <div class="li-num-grid">
+            <div><label class="form-label">Default max connections</label>{{ settings_form.connection_max }}</div>
+            <div><label class="form-label">Default max pages</label>{{ settings_form.connection_max_pages }}</div>
           </div>
           {% include "adminpanel/linkedin/_excel_format_editor.html" with scraper_type="connection" scraper_label="Connection scraper" %}
           <button type="button" class="btn btn-ap mt-3" id="liSaveSettings"><i class="fas fa-save me-1"></i> Save settings</button>

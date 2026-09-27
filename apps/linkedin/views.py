@@ -9,6 +9,7 @@ from django.views.decorators.http import require_GET, require_POST
 from apps.linkedin.forms import (
     ConnectionScraperForm,
     JobScraperForm,
+    PerfectMatchJobForm,
     PostsScraperForm,
     SessionForm,
     SettingsForm,
@@ -79,6 +80,9 @@ def _scraper_context(request, form_class, task_type):
     if task_type == ScraperTask.TASK_JOB:
         ctx["recent_job_outputs"] = list_recent_job_output_files()
         ctx["latest_job_output"] = get_latest_job_output_file()
+    if task_type == ScraperTask.TASK_PERFECT_MATCH:
+        ctx["recent_job_outputs"] = list_recent_job_output_files(prefix="skill_match_job")
+        ctx["latest_job_output"] = get_latest_job_output_file(prefix="skill_match_job")
     return ctx
 
 
@@ -107,6 +111,15 @@ def job_scraper(request):
         request,
         "adminpanel/linkedin/jobs.html",
         _scraper_context(request, JobScraperForm, ScraperTask.TASK_JOB),
+    )
+
+
+@_admin_required
+def perfect_match_scraper(request):
+    return render(
+        request,
+        "adminpanel/linkedin/perfect_match.html",
+        _scraper_context(request, PerfectMatchJobForm, ScraperTask.TASK_PERFECT_MATCH),
     )
 
 

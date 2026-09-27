@@ -1,0 +1,26 @@
+{% extends "adminpanel/crm/_shell.html" %}
+{% block page_title %}Follow-ups{% endblock %}
+{% block content %}
+{% include "adminpanel/crm/_nav.html" %}
+<div class="li-scraper-page">
+  <div class="ap-card mb-3">
+    <div class="d-flex flex-wrap gap-2">
+      <a class="btn btn-sm {% if bucket == 'today' %}btn-ap{% else %}btn-outline-secondary{% endif %}" href="?bucket=today">Today</a>
+      <a class="btn btn-sm {% if bucket == 'upcoming' %}btn-ap{% else %}btn-outline-secondary{% endif %}" href="?bucket=upcoming">Upcoming</a>
+      <a class="btn btn-sm {% if bucket == 'overdue' %}btn-ap{% else %}btn-outline-secondary{% endif %}" href="?bucket=overdue">Overdue</a>
+      <a class="btn btn-sm {% if bucket == 'all' %}btn-ap{% else %}btn-outline-secondary{% endif %}" href="?bucket=all">All</a>
+    </div>
+  </div>
+  <div class="ap-card">
+    {% for item in followups %}
+    <div class="li-recent-output-item">
+      <a class="li-output-file-link" href="{% url 'crm:contact_detail' item.contact_id %}">{{ item.contact.name }}</a>
+      <span class="small text-muted">{{ item.get_channel_display }} · {{ item.notes|truncatechars:80 }}</span>
+      <span class="badge text-bg-light border">{{ item.next_date|default:"—" }}</span>
+    </div>
+    {% empty %}
+    <p class="small text-muted mb-0">Nothing in this list.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

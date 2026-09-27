@@ -9,6 +9,7 @@ from django.views.decorators.http import require_GET, require_POST
 from apps.linkedin.forms import (
     ConnectionScraperForm,
     JobScraperForm,
+    PerfectMatchJobForm,
     PostsScraperForm,
 )
 from apps.linkedin.models import ScraperTask, TaskLog
@@ -104,6 +105,7 @@ def api_task_start(request):
 
     form_map = {
         ScraperTask.TASK_JOB: (JobScraperForm, _job_config_from_api),
+        ScraperTask.TASK_PERFECT_MATCH: (PerfectMatchJobForm, _perfect_match_config_from_api),
         ScraperTask.TASK_CONNECTION: (ConnectionScraperForm, _connection_config_from_api),
         ScraperTask.TASK_POSTS: (PostsScraperForm, _posts_config_from_api),
     }
@@ -126,7 +128,7 @@ def api_task_start(request):
 
     try:
         task_config = form.cleaned_config()
-        if task_type == ScraperTask.TASK_JOB:
+        if task_type in (ScraperTask.TASK_JOB, ScraperTask.TASK_PERFECT_MATCH):
             task_config["skip_searches"] = config.get("skip_searches") or []
         persist_run_config_to_settings(task_type, task_config)
         task = start_task(task_type, config=task_config, run_in_background=True)
@@ -153,6 +155,32 @@ def _job_config_from_api(config):
         "resume": config.get("resume", True),
         "skip_previous_jobs": bool(config.get("skip_previous_jobs")),
         "skip_searches": config.get("skip_searches") or [],
+    }
+
+
+def _perfect_match_config_from_api(config):
+    skills = config.get("skills")
+    if isinstance(skills, list):
+        skills_list = [str(s).strip() for s in skills if str(s).strip()]
+        skills_text = "\n".join(skills_list)
+    else:
+        skills_text = _lines(skills)
+        skills_list = [s.strip() for s in skills_text.splitlines() if s.strip()]
+    search_query = " ".join(skills_list)
+    return {
+        "skills": skills_text,
+        "experience": (config.get("experience") or "fresher").strip(),
+        "min_skills_match": config.get("min_skills_match", 1),
+        "locations": _lines(config.get("locations")),
+        "max_pages": config.get("max_pages", 40),
+        "max_jobs": config.get("max_jobs", 0),
+        "max_job_age_hours": normalize_max_job_age_hours(config.get("max_job_age_hours", 24)),
+        "headless": True,
+        "resume": bool(config.get("resume", False)),
+        "skip_previous_jobs": bool(config.get("skip_previous_jobs")),
+        "skip_searches": config.get("skip_searches") or [],
+        # Kept for checklist compatibility; cleaned_config rebuilds from skills.
+        "keywords": [search_query] if search_query else [],
     }
 
 
@@ -223,7 +251,10 @@ def api_task_skip_searches(request):
         return JsonResponse({"ok": False, "message": "skip_searches must be a list"}, status=400)
 
     task = ScraperTask.objects.filter(pk=task_id).first()
-    if not task or task.task_type != ScraperTask.TASK_JOB:
+    if not task or task.task_type not in (
+        ScraperTask.TASK_JOB,
+        ScraperTask.TASK_PERFECT_MATCH,
+    ):
         return JsonResponse({"ok": False, "message": "Job task not found"}, status=404)
     if task.status not in {
         ScraperTask.STATUS_PENDING,

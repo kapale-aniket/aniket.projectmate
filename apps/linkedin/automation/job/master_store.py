@@ -7,9 +7,42 @@ from datetime import date, datetime
 from job.job_filter import job_id_from_url
 
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "output")
-FILE_PREFIX = "aniket_projectmate"
-DAILY_JSON_PATTERN = re.compile(rf"^{re.escape(FILE_PREFIX)}_(\d{{4}}-\d{{2}}-\d{{2}})\.json$")
-LEGACY_JSON = os.path.join(OUTPUT_DIR, f"{FILE_PREFIX}_master.json")
+DEFAULT_FILE_PREFIX = "aniket_projectmate"
+PERFECT_MATCH_FILE_PREFIX = "skill_match_job"
+FILE_PREFIX = DEFAULT_FILE_PREFIX
+DEFAULT_RETENTION_HOURS = 48
+# Backward-compatible alias (2 days ≈ 48 hours).
+DEFAULT_RETENTION_DAYS = 2
+PERFECT_MATCH_RETENTION_HOURS = 24
+DAILY_JSON_PATTERN = re.compile(rf"^{re.escape(DEFAULT_FILE_PREFIX)}_(\d{{4}}-\d{{2}}-\d{{2}})\.json$")
+LEGACY_JSON = os.path.join(OUTPUT_DIR, f"{DEFAULT_FILE_PREFIX}_master.json")
+
+
+def get_file_prefix():
+    try:
+        from job import config as cfg
+
+        if (getattr(cfg, "SCRAPE_MODE", "") or "").strip().lower() == "perfect_match":
+            return PERFECT_MATCH_FILE_PREFIX
+    except Exception:
+        pass
+    return DEFAULT_FILE_PREFIX
+
+
+def get_retention_hours():
+    try:
+        from job import config as cfg
+
+        if (getattr(cfg, "SCRAPE_MODE", "") or "").strip().lower() == "perfect_match":
+            return PERFECT_MATCH_RETENTION_HOURS
+    except Exception:
+        pass
+    return DEFAULT_RETENTION_HOURS
+
+
+def _daily_json_pattern(prefix=None):
+    prefix = prefix or get_file_prefix()
+    return re.compile(rf"^{re.escape(prefix)}_(\d{{4}}-\d{{2}}-\d{{2}})\.json$")
 
 
 def _resolve_day(day=None):
@@ -18,13 +51,13 @@ def _resolve_day(day=None):
 
 def daily_json_path(day=None):
     day_str = _resolve_day(day).strftime("%Y-%m-%d")
-    return os.path.join(OUTPUT_DIR, f"{FILE_PREFIX}_{day_str}.json")
+    return os.path.join(OUTPUT_DIR, f"{get_file_prefix()}_{day_str}.json")
 
 
 def daily_excel_path(day=None):
     """Return today's single Excel path (overwrite on each finalize)."""
     day_str = _resolve_day(day).strftime("%Y-%m-%d")
-    return os.path.join(OUTPUT_DIR, f"{FILE_PREFIX}_{day_str}.xlsx")
+    return os.path.join(OUTPUT_DIR, f"{get_file_prefix()}_{day_str}.xlsx")
 
 
 def _parse_date(text):
@@ -56,14 +89,17 @@ def job_ids_from_jobs(jobs):
 
 
 def known_job_ids():
+    """Known IDs for the active scrape mode prefix only (skip previous jobs)."""
+    prefix = get_file_prefix()
+    pattern = _daily_json_pattern(prefix)
     ids = set()
-    if os.path.exists(LEGACY_JSON):
+    if prefix == DEFAULT_FILE_PREFIX and os.path.exists(LEGACY_JSON):
         ids |= job_ids_from_jobs(_read_jobs_from_json(LEGACY_JSON))
-    for path in glob.glob(os.path.join(OUTPUT_DIR, f"{FILE_PREFIX}_*.json")):
+    for path in glob.glob(os.path.join(OUTPUT_DIR, f"{prefix}_*.json")):
         basename = os.path.basename(path)
-        if basename == f"{FILE_PREFIX}_master.json":
+        if basename == f"{prefix}_master.json":
             continue
-        if not DAILY_JSON_PATTERN.match(basename):
+        if not pattern.match(basename):
             continue
         ids |= job_ids_from_jobs(_read_jobs_from_json(path))
     return ids
@@ -71,9 +107,11 @@ def known_job_ids():
 
 def count_previous_daily_files(day=None):
     today = _resolve_day(day)
+    prefix = get_file_prefix()
+    pattern = _daily_json_pattern(prefix)
     count = 0
-    for path in glob.glob(os.path.join(OUTPUT_DIR, f"{FILE_PREFIX}_*.json")):
-        match = DAILY_JSON_PATTERN.match(os.path.basename(path))
+    for path in glob.glob(os.path.join(OUTPUT_DIR, f"{prefix}_*.json")):
+        match = pattern.match(os.path.basename(path))
         if not match:
             continue
         file_day = _parse_date(match.group(1))
@@ -109,9 +147,11 @@ def save_today_store(store, day=None):
 def load_all_previous_jobs(day=None):
     """Return jobs from all daily JSON files before today."""
     today = _resolve_day(day)
+    prefix = get_file_prefix()
+    pattern = _daily_json_pattern(prefix)
     jobs = []
-    for path in glob.glob(os.path.join(OUTPUT_DIR, f"{FILE_PREFIX}_*.json")):
-        match = DAILY_JSON_PATTERN.match(os.path.basename(path))
+    for path in glob.glob(os.path.join(OUTPUT_DIR, f"{prefix}_*.json")):
+        match = pattern.match(os.path.basename(path))
         if not match:
             continue
         file_day = _parse_date(match.group(1))
@@ -123,9 +163,11 @@ def load_all_previous_jobs(day=None):
 def summarize_known_jobs(day=None):
     """Print-friendly summary of jobs loaded from previous daily files."""
     today = _resolve_day(day)
+    prefix = get_file_prefix()
+    pattern = _daily_json_pattern(prefix)
     previous_files = []
-    for path in glob.glob(os.path.join(OUTPUT_DIR, f"{FILE_PREFIX}_*.json")):
-        match = DAILY_JSON_PATTERN.match(os.path.basename(path))
+    for path in glob.glob(os.path.join(OUTPUT_DIR, f"{prefix}_*.json")):
+        match = pattern.match(os.path.basename(path))
         if not match:
             continue
         file_day = _parse_date(match.group(1))
@@ -151,55 +193,85 @@ def ensure_daily_excel(today_store, day=None):
     return excel_path
 
 
-DEFAULT_RETENTION_HOURS = 48
-# Backward-compatible alias (2 days ≈ 48 hours).
-DEFAULT_RETENTION_DAYS = 2
-
-
 def purge_old_files(retention_hours=None, retention_days=None, day=None):
-    """Permanently remove job output files older than 48 hours (by mtime).
+    """Permanently remove job output files older than retention (by mtime).
 
-    Deletes `FILE_PREFIX_YYYY-MM-DD` JSON/XLSX, numeric-suffixed Excel variants,
-    and merged_*.xlsx older than the retention window. Does not soft-delete/trash.
+    Always purges both normal jobs (48h) and skill_match_job (24h).
+    Also removes merged_*.xlsx older than the default job retention.
     """
     import time
 
-    if retention_hours is None:
-        if retention_days is not None:
-            retention_hours = float(retention_days) * 24.0
-        else:
-            retention_hours = float(DEFAULT_RETENTION_HOURS)
-
-    cutoff_ts = time.time() - (float(retention_hours) * 3600.0)
     removed = []
+    now = time.time()
 
-    patterns = [
-        os.path.join(OUTPUT_DIR, f"{FILE_PREFIX}_*.json"),
-        os.path.join(OUTPUT_DIR, f"{FILE_PREFIX}_*.xlsx"),
+    # Purge each prefix with its own retention window.
+    prefix_hours = [
+        (DEFAULT_FILE_PREFIX, DEFAULT_RETENTION_HOURS),
+        (PERFECT_MATCH_FILE_PREFIX, PERFECT_MATCH_RETENTION_HOURS),
+    ]
+    # If caller overrides retention, apply that to the active prefix only,
+    # and still purge the other prefix with its default.
+    if retention_hours is not None or retention_days is not None:
+        if retention_hours is None:
+            retention_hours = float(retention_days) * 24.0
+        active = get_file_prefix()
+        prefix_hours = [
+            (active, float(retention_hours)),
+            *(
+                (p, h)
+                for p, h in [
+                    (DEFAULT_FILE_PREFIX, DEFAULT_RETENTION_HOURS),
+                    (PERFECT_MATCH_FILE_PREFIX, PERFECT_MATCH_RETENTION_HOURS),
+                ]
+                if p != active
+            ),
+        ]
+
+    for prefix, hours in prefix_hours:
+        cutoff_ts = now - (float(hours) * 3600.0)
+        for pattern in (
+            os.path.join(OUTPUT_DIR, f"{prefix}_*.json"),
+            os.path.join(OUTPUT_DIR, f"{prefix}_*.xlsx"),
+        ):
+            for path in glob.glob(pattern):
+                basename = os.path.basename(path)
+                if basename in {f"{prefix}_master.json", "scrape_state.json"}:
+                    continue
+                try:
+                    mtime = os.path.getmtime(path)
+                except OSError:
+                    continue
+                if mtime > cutoff_ts:
+                    continue
+                try:
+                    os.remove(path)
+                    removed.append(basename)
+                except OSError:
+                    pass
+
+    # Merged exports follow normal job retention.
+    merged_cutoff = now - (float(DEFAULT_RETENTION_HOURS) * 3600.0)
+    for pattern in (
         os.path.join(OUTPUT_DIR, "merged_*.xlsx"),
         os.path.join(OUTPUT_DIR, "merged_*.csv"),
-    ]
-    for pattern in patterns:
+    ):
         for path in glob.glob(pattern):
-            basename = os.path.basename(path)
-            if basename in {f"{FILE_PREFIX}_master.json", "scrape_state.json"}:
-                continue
             try:
                 mtime = os.path.getmtime(path)
             except OSError:
                 continue
-            if mtime > cutoff_ts:
+            if mtime > merged_cutoff:
                 continue
             try:
                 os.remove(path)
-                removed.append(basename)
+                removed.append(os.path.basename(path))
             except OSError:
                 pass
 
     if removed:
         print(
-            f"Purged {len(removed)} job output file(s) older than "
-            f"{int(retention_hours)}h: {', '.join(removed[:8])}"
+            f"Purged {len(removed)} job output file(s): "
+            f"{', '.join(removed[:8])}"
             + ("..." if len(removed) > 8 else "")
         )
     return removed
