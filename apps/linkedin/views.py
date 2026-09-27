@@ -14,7 +14,7 @@ from apps.linkedin.forms import (
     SessionForm,
     SettingsForm,
 )
-from apps.linkedin.models import ScraperTask
+from apps.linkedin.models import LinkedInSearchUser, ScraperTask
 from apps.linkedin.services.config_service import load_settings
 from apps.linkedin.services.settings_helpers import (
     apply_last_task_form_defaults,
@@ -45,7 +45,23 @@ def _admin_required(view):
     @login_required(login_url="/admin/")
     def _wrapped(request, *args, **kwargs):
         user = request.user
-        if not (user.is_staff or user.is_superuser or getattr(user, "role", "") == "admin"):
+        role = getattr(user, "role", "")
+        if not (user.is_staff or user.is_superuser or role in {"admin", "linkedin_search"}):
+            messages.error(request, "Admin access required.")
+            return redirect("adminpanel:login")
+        return view(request, *args, **kwargs)
+
+    return _wrapped
+
+
+def _staff_only(view):
+    @login_required(login_url="/admin/")
+    def _wrapped(request, *args, **kwargs):
+        user = request.user
+        role = getattr(user, "role", "")
+        if role == "linkedin_search":
+            return redirect("linkedin:jobs")
+        if not (user.is_staff or user.is_superuser or role == "admin"):
             messages.error(request, "Admin access required.")
             return redirect("adminpanel:login")
         return view(request, *args, **kwargs)
@@ -272,7 +288,132 @@ def trash_view(request):
     return redirect(f"{reverse('linkedin:output')}?trash=1")
 
 
-@_admin_required
+ASSIGNABLE_TABS = [
+    ("home", "Overview"),
+    ("session", "Session"),
+    ("jobs", "Jobs"),
+    ("perfect_match", "Perfect Match"),
+    ("connections", "Connections"),
+    ("posts", "Posts"),
+    ("output", "Output"),
+    ("logs", "Logs"),
+]
+
+
+def _normalize_phone(raw):
+    digits = "".join(ch for ch in str(raw or "") if ch.isdigit())
+    return digits[-10:] if len(digits) >= 10 else digits
+
+
+def _save_search_user(request):
+    from apps.accounts.models import User
+
+    raw_id = (request.POST.get("user_id") or "").strip()
+    name = (request.POST.get("name") or "").strip()
+    email = (request.POST.get("email") or "").strip().lower()
+    phone = _normalize_phone(request.POST.get("phone"))
+    password = request.POST.get("password") or ""
+    allowed = {key for key, _label in ASSIGNABLE_TABS}
+    tabs = []
+    for key in request.POST.getlist("tabs"):
+        if key in allowed and key not in tabs:
+            tabs.append(key)
+    is_active = request.POST.get("is_active") == "1"
+    if not name or "@" not in email:
+        messages.error(request, "Name and a valid email are required.")
+        return
+    if not tabs:
+        messages.error(request, "Select at least one tab.")
+        return
+    if password and len(password) < 6:
+        messages.error(request, "Password must be at least 6 characters.")
+        return
+    if phone and len(phone) != 10:
+        messages.error(request, "Mobile number must be 10 digits, or leave it blank.")
+        return
+
+    if raw_id:
+        access = LinkedInSearchUser.objects.select_related("user").filter(pk=raw_id).first()
+        if not access:
+            messages.error(request, "User not found.")
+            return
+        user = access.user
+        if User.objects.filter(email__iexact=email).exclude(pk=user.pk).exists():
+            messages.error(request, "That email is already used.")
+            return
+    else:
+        if len(password) < 6:
+            messages.error(request, "Password must be at least 6 characters.")
+            return
+        if User.objects.filter(email__iexact=email).exists():
+            messages.error(request, "That email is already used.")
+            return
+        user = User(
+            email=email,
+            username=email,
+            role=User.Role.LINKEDIN_SEARCH,
+            is_staff=False,
+            is_superuser=False,
+        )
+        access = LinkedInSearchUser(user=user)
+
+    user.email = email
+    user.username = email
+    user.first_name = name[:150]
+    user.role = User.Role.LINKEDIN_SEARCH
+    user.is_staff = False
+    user.is_superuser = False
+    user.is_active = is_active
+    if password or not user.pk:
+        user.set_password(password)
+    user.save()
+    access.phone = phone
+    access.tabs = tabs
+    access.is_active = is_active
+    access.user = user
+    access.save()
+    messages.success(request, "Search user saved.")
+
+
+def _delete_search_user(request):
+    access = LinkedInSearchUser.objects.select_related("user").filter(pk=request.POST.get("user_id")).first()
+    if not access:
+        messages.error(request, "User not found.")
+        return
+    account = access.user
+    if account.pk == request.user.pk or account.is_superuser or account.role == "admin":
+        messages.error(request, "This account cannot be removed here.")
+        return
+    email = account.email
+    account.delete()
+    messages.success(request, f"Removed {email}.")
+
+
+@_staff_only
+def linkedin_users(request):
+    from apps.linkedin.services.stats import session_status
+
+    if request.method == "POST":
+        if (request.POST.get("action") or "") == "delete":
+            _delete_search_user(request)
+        else:
+            _save_search_user(request)
+        return redirect("linkedin:users")
+    return render(
+        request,
+        "adminpanel/linkedin/settings.html",
+        {
+            "settings_tab": "users",
+            "search_users": LinkedInSearchUser.objects.select_related("user"),
+            "assignable_tabs": ASSIGNABLE_TABS,
+            "session": session_status(),
+            "linkedin_nav": "settings",
+            "config_locked": False,
+        },
+    )
+
+
+@_staff_only
 def settings_view(request):
     ensure_settings_initialized()
     tab = request.GET.get("tab", "job")

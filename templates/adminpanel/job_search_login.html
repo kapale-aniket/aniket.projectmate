@@ -1,0 +1,181 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en" data-theme="{{ theme|default:'light' }}" data-bs-theme="{{ theme|default:'light' }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="{% if theme == 'dark' %}#0b1220{% else %}#1a365d{% endif %}" data-light-color="#1a365d">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <title>JOB search user — {{ SITE_NAME|default:"Aniket.ProjectMate" }}</title>
+  <script>
+    (function () {
+      try {
+        var m = document.cookie.match(/(?:^|;\s*)theme=([^;]+)/);
+        var t = (m && decodeURIComponent(m[1])) || document.documentElement.getAttribute("data-theme") || "light";
+        if (t !== "dark" && t !== "light") t = "light";
+        document.documentElement.setAttribute("data-theme", t);
+        document.documentElement.setAttribute("data-bs-theme", t);
+      } catch (e) {}
+    })();
+  </script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;9..144,700&display=swap" rel="stylesheet">
+  <link href="{% static 'css/adminpanel.css' %}" rel="stylesheet">
+</head>
+<body class="ap-login-body">
+  {% include "components/toasts.html" %}
+
+  <button type="button"
+          class="btn btn-sm btn-outline-secondary ap-login__theme ap-theme-toggle"
+          data-theme-toggle
+          data-theme-url="{% url 'core:theme_toggle' %}"
+          aria-label="{% if theme == 'dark' %}Switch to light mode{% else %}Switch to dark mode{% endif %}"
+          title="{% if theme == 'dark' %}Light mode{% else %}Dark mode{% endif %}">
+    <i class="fas {% if theme == 'dark' %}fa-sun{% else %}fa-moon{% endif %}" data-theme-icon></i>
+  </button>
+
+  <div class="ap-login">
+    <div class="ap-login__stage">
+      <aside class="ap-login__brand" aria-hidden="false">
+        <div class="ap-login__orb ap-login__orb--a" aria-hidden="true"></div>
+        <div class="ap-login__orb ap-login__orb--b" aria-hidden="true"></div>
+        <div class="ap-login__brand-inner">
+          <p class="ap-login__eyebrow">JOB search user</p>
+          <h1 class="ap-login__brand-name">Aniket.<em>ProjectMate</em></h1>
+          <p class="ap-login__brand-lead">Search your dream job, then download the Excel sheet with the apply link.</p>
+          <ul class="ap-login__perks">
+            <li><i class="fas fa-magnifying-glass" aria-hidden="true"></i> Search your dream job</li>
+            <li><i class="fas fa-file-lines" aria-hidden="true"></i> Check the output file</li>
+            <li><i class="fas fa-file-excel" aria-hidden="true"></i> Excel sheet with a direct apply link</li>
+          </ul>
+        </div>
+      </aside>
+
+      <main class="ap-login__panel">
+        <div class="ap-login__card">
+          <div class="ap-login__card-head">
+            <span class="ap-login__mark" aria-hidden="true"><i class="fas fa-lock"></i></span>
+            <div>
+              <h2 class="ap-login__title">JOB search user</h2>
+              <p class="ap-login__subtitle">Sign in with the email or mobile you registered</p>
+            </div>
+          </div>
+
+          <form method="post" class="ap-login__form" novalidate autocomplete="on">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="ap-login__alert" role="alert">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="ap-login__field">
+              <label class="ap-login__label" for="{{ form.username.id_for_label }}">Email or mobile</label>
+              {{ form.username }}
+              {% for e in form.username.errors %}<div class="ap-login__error">{{ e }}</div>{% endfor %}
+            </div>
+
+            <div class="ap-login__field">
+              <label class="ap-login__label" for="{{ form.password.id_for_label }}">Password</label>
+              {{ form.password }}
+              {% for e in form.password.errors %}<div class="ap-login__error">{{ e }}</div>{% endfor %}
+            </div>
+
+            <div class="ap-login__row">
+              <label class="ap-login__remember" for="{{ form.remember_me.id_for_label }}">
+                {{ form.remember_me }}
+                <span>Keep me remembered for 15 days</span>
+            </label>
+            </div>
+            {% for e in form.remember_me.errors %}<div class="ap-login__error">{{ e }}</div>{% endfor %}
+
+            <button class="ap-login__submit" type="submit">
+              <span>Sign in</span>
+              <i class="fas fa-arrow-right" aria-hidden="true"></i>
+            </button>
+          </form>
+
+          <p class="ap-login__footer">
+            <a href="{% url 'core:home' %}"><i class="fas fa-arrow-left me-1" aria-hidden="true"></i> Back to site</a>
+          </p>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{% static 'js/toasts.js' %}"></script>
+  <script src="{% static 'js/password-toggle.js' %}"></script>
+  <script src="{% static 'js/required-fields.js' %}"></script>
+  <script>
+  (function () {
+    var params = new URLSearchParams(window.location.search);
+    var loggedOut = params.get("logged_out") === "1";
+
+    function lockLoginHistory() {
+      if (!window.history || !window.history.pushState) return;
+      var url = window.location.pathname;
+      window.history.replaceState({ apLogin: 1 }, "", url);
+      window.history.pushState({ apLogin: 1 }, "", url);
+      window.addEventListener("popstate", function () {
+        // Stay on login after logout — do not walk back into cached admin pages
+        window.history.pushState({ apLogin: 1 }, "", url);
+      });
+    }
+
+    if (loggedOut) {
+      lockLoginHistory();
+    }
+
+    // Only reload when restored from bfcache (avoids CSRF races on normal navigation)
+    window.addEventListener("pageshow", function (event) {
+      if (event.persisted) {
+        window.location.reload();
+      }
+    });
+
+    function getCsrfToken() {
+      var match = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+      if (match) return decodeURIComponent(match[1]);
+      var input = document.querySelector("[name=csrfmiddlewaretoken]");
+      return input && input.value ? input.value : "";
+    }
+    function applyTheme(theme) {
+      var next = theme === "dark" ? "dark" : "light";
+      document.documentElement.setAttribute("data-theme", next);
+      document.documentElement.setAttribute("data-bs-theme", next);
+      document.cookie = "theme=" + next + ";path=/;max-age=" + (60 * 60 * 24 * 365) + ";SameSite=Lax";
+      document.querySelectorAll("[data-theme-icon]").forEach(function (icon) {
+        icon.className = next === "dark" ? "fas fa-sun" : "fas fa-moon";
+      });
+      document.querySelectorAll("[data-theme-toggle]").forEach(function (btn) {
+        btn.setAttribute("aria-label", next === "dark" ? "Switch to light mode" : "Switch to dark mode");
+        btn.setAttribute("title", next === "dark" ? "Light mode" : "Dark mode");
+      });
+    }
+    document.querySelectorAll("[data-theme-toggle]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.preventDefault();
+        var current = document.documentElement.getAttribute("data-theme") || "light";
+        var next = current === "dark" ? "light" : "dark";
+        applyTheme(next);
+        var url = btn.getAttribute("data-theme-url");
+        if (!url) return;
+        var body = new URLSearchParams();
+        body.set("theme", next);
+        fetch(url, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "X-CSRFToken": getCsrfToken(),
+            "X-Requested-With": "XMLHttpRequest",
+          },
+          body: body.toString(),
+          credentials: "same-origin",
+        }).catch(function () {});
+      });
+    });
+  })();
+  </script>
+</body>
+</html>

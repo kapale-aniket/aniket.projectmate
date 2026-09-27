@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
 
@@ -69,6 +70,31 @@ class ScraperTask(models.Model):
         self.error_message = error_message or ""
         self.pid = None
         self.save(update_fields=["status", "finished_at", "error_message", "pid"])
+
+
+class LinkedInSearchUser(models.Model):
+    """JOB search sign-in. Tabs control which LinkedIn pages this person can open."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="linkedin_search_access",
+    )
+    phone = models.CharField(max_length=20, blank=True)
+    tabs = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return self.user.email
+
+    def tab_set(self):
+        raw = self.tabs if isinstance(self.tabs, list) else []
+        return {str(tab) for tab in raw if tab}
 
 
 class TaskLog(models.Model):

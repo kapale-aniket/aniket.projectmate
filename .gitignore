@@ -18,6 +18,7 @@ media/
 staticfiles/
 .env
 .env.local
+.tools/
 
 # IDE
 .idea/

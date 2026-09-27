@@ -1,4 +1,5 @@
 """Student dashboard views."""
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth import update_session_auth_hash
 from django.contrib import messages
@@ -115,7 +116,7 @@ class PasswordChangeView(LoginRequiredMixin, FormView):
 
         changed_at = timezone.localtime().strftime("%d %b %Y, %I:%M %p")
         site = SiteSettings.load()
-        contact = getattr(site, "contact_email", "") or "backendbyaniket@gmail.com"
+        contact = getattr(site, "contact_email", "") or settings.PROJECT_MAIL
         name = user.get_full_name() or user.email
 
         EmailService.send_from_template(

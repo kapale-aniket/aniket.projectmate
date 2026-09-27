@@ -11,13 +11,19 @@
   <div class="alert alert-warning py-2 small">{{ config_lock_message }}</div>
   {% endif %}
   <ul class="nav nav-pills mb-3 flex-wrap gap-1">
-    <li class="nav-item"><a class="nav-link {% if settings_tab == 'job' %}active{% endif %}" href="?tab=job">Jobs</a></li>
-    <li class="nav-item"><a class="nav-link {% if settings_tab == 'connection' %}active{% endif %}" href="?tab=connection">Connections</a></li>
-    <li class="nav-item"><a class="nav-link {% if settings_tab == 'posts' %}active{% endif %}" href="?tab=posts">Posts</a></li>
-    <li class="nav-item"><a class="nav-link {% if settings_tab == 'browser' %}active{% endif %}" href="?tab=browser">Browser</a></li>
-    <li class="nav-item"><a class="nav-link {% if settings_tab == 'cursor' %}active{% endif %}" href="?tab=cursor">Screen awake</a></li>
+    <li class="nav-item"><a class="nav-link {% if settings_tab == 'job' %}active{% endif %}" href="{% url 'linkedin:settings' %}?tab=job">Jobs</a></li>
+    <li class="nav-item"><a class="nav-link {% if settings_tab == 'connection' %}active{% endif %}" href="{% url 'linkedin:settings' %}?tab=connection">Connections</a></li>
+    <li class="nav-item"><a class="nav-link {% if settings_tab == 'posts' %}active{% endif %}" href="{% url 'linkedin:settings' %}?tab=posts">Posts</a></li>
+    <li class="nav-item"><a class="nav-link {% if settings_tab == 'browser' %}active{% endif %}" href="{% url 'linkedin:settings' %}?tab=browser">Browser</a></li>
+    <li class="nav-item"><a class="nav-link {% if settings_tab == 'cursor' %}active{% endif %}" href="{% url 'linkedin:settings' %}?tab=cursor">Screen awake</a></li>
+    {% if li_access.manage_users %}
+    <li class="nav-item"><a class="nav-link {% if settings_tab == 'users' %}active{% endif %}" href="{% url 'linkedin:users' %}">Users</a></li>
+    {% endif %}
   </ul>
 
+  {% if settings_tab == 'users' %}
+  {% include "adminpanel/linkedin/_search_users.html" %}
+  {% else %}
   <form id="liSettingsForm" data-settings-tab="{{ settings_tab }}">
     {{ settings_form.job_excel_format }}
     {{ settings_form.connection_excel_format }}
@@ -88,6 +94,7 @@
       <i class="fas fa-save me-1"></i> Save settings
     </button>
   </form>
+  {% endif %}
 </div>
 {% endblock %}
 {% block extra_js %}

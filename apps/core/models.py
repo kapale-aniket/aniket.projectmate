@@ -41,7 +41,7 @@ class SiteSettings(BaseModel):
         help_text="Show YouTube in the floating social icons",
     )
     default_meet_link = models.URLField(blank=True)
-    contact_email = models.EmailField(blank=True, default="backendbyaniket@gmail.com")
+    contact_email = models.EmailField(blank=True, default="aniketkapale02@gmail.com")
     contact_phone = models.CharField(max_length=30, blank=True)
     contact_address = models.TextField(blank=True)
     footer_text = models.TextField(blank=True, default="Empowering students through practical learning.")

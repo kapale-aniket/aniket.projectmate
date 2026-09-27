@@ -9,6 +9,7 @@ app_name = "adminpanel"
 urlpatterns = [
     # /admin/ → login page; dashboard lives at /admin/dashboard/
     path("", views.AdminLoginView.as_view(), name="login"),
+    path("job-search/", views.JobSearchUserLoginView.as_view(), name="job_search_login"),
     path("login/", RedirectView.as_view(pattern_name="adminpanel:login", permanent=False)),
     path("forgot-password/", views.AdminForgotPasswordView.as_view(), name="forgot_password"),
     path("logout/", views.AdminLogoutView.as_view(), name="logout"),

@@ -12,7 +12,7 @@ def create_student_profile(sender, instance, created, **kwargs):
     from apps.accounts.models import StudentProfile
     from apps.notifications.services import EmailService
 
-    if created:
+    if created and getattr(instance, "role", "") != "linkedin_search":
         StudentProfile.objects.get_or_create(user=instance)
         try:
             EmailService.send_from_template(

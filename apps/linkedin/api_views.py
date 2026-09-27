@@ -49,7 +49,8 @@ def _admin_api(view):
     @login_required(login_url="/admin/")
     def _wrapped(request, *args, **kwargs):
         user = request.user
-        if not (user.is_staff or user.is_superuser or getattr(user, "role", "") == "admin"):
+        role = getattr(user, "role", "")
+        if not (user.is_staff or user.is_superuser or role in {"admin", "linkedin_search"}):
             return JsonResponse({"ok": False, "message": "Admin access required"}, status=403)
         return view(request, *args, **kwargs)
 

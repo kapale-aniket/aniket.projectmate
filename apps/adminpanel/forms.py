@@ -64,6 +64,51 @@ class AdminLoginForm(AuthenticationForm):
         return super().clean()
 
 
+class JobSearchUserLoginForm(AuthenticationForm):
+    username = forms.CharField(
+        label="Email or mobile",
+        widget=forms.TextInput(
+            attrs={
+                "class": "ap-login__input",
+                "placeholder": "Email or mobile number",
+                "autocomplete": "username",
+                "autofocus": True,
+            }
+        ),
+    )
+    password = forms.CharField(
+        label="Password",
+        widget=forms.PasswordInput(
+            attrs={
+                "class": "ap-login__input",
+                "placeholder": "Enter your password",
+                "autocomplete": "current-password",
+            }
+        ),
+    )
+    remember_me = forms.BooleanField(
+        required=False,
+        widget=forms.CheckboxInput(attrs={"class": "form-check-input ap-login__check"}),
+    )
+
+    def clean(self):
+        username = (self.cleaned_data.get("username") or "").strip()
+        if username and "@" not in username:
+            digits = "".join(ch for ch in username if ch.isdigit())
+            key = digits[-10:] if len(digits) >= 10 else ""
+            if key:
+                from apps.linkedin.models import LinkedInSearchUser
+
+                access = (
+                    LinkedInSearchUser.objects.select_related("user")
+                    .filter(is_active=True, phone__endswith=key, user__role="linkedin_search", user__is_active=True)
+                    .first()
+                )
+                if access:
+                    self.cleaned_data["username"] = access.user.email
+        return super().clean()
+
+
 class AdminForgotPasswordForm(forms.Form):
     email = forms.EmailField(
         label="Admin email",

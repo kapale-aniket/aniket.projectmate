@@ -185,6 +185,7 @@ class EmailService:
                 body=body_text or strip_tags(body_html),
                 from_email=settings.DEFAULT_FROM_EMAIL,
                 to=[to_email],
+                reply_to=[getattr(settings, "PROJECT_MAIL", "") or settings.DEFAULT_FROM_EMAIL],
             )
             msg.attach_alternative(body_html, "text/html")
             if ics_content:

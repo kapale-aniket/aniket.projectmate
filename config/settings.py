@@ -17,6 +17,13 @@ SECRET_KEY = env("SECRET_KEY", default="dev-insecure-change-me-projectmate-2026"
 DEBUG = env("DEBUG")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1", "*"])
 CSRF_TRUSTED_ORIGINS = env.list("CSRF_TRUSTED_ORIGINS", default=[])
+# Optional Cloudflare quick tunnel (cloudflared). Local http://127.0.0.1:8000
+# keeps working when the tunnel is not running.
+if ".trycloudflare.com" not in ALLOWED_HOSTS and "*" not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(".trycloudflare.com")
+for _tunnel_origin in ("https://*.trycloudflare.com",):
+    if _tunnel_origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(_tunnel_origin)
 CSRF_FAILURE_VIEW = "apps.core.errors.csrf_failure"
 
 SITE_NAME = env("SITE_NAME", default="Aniket.ProjectMate")
@@ -96,6 +103,7 @@ TEMPLATES = [
                 "apps.core.context_processors.site_settings",
                 "apps.core.context_processors.theme",
                 "apps.notifications.context_processors.unread_notifications",
+                "apps.linkedin.context_processors.linkedin_access",
             ],
         },
     },
@@ -239,17 +247,23 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 EMAIL_BACKEND = env(
     "EMAIL_BACKEND",
-    default="django.core.mail.backends.smtp.EmailBackend",
+    default="apps.core.email_backend.ProjectEmailBackend",
 )
 EMAIL_HOST = env("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+PROJECT_MAIL = env("PROJECT_MAIL", default="aniketkapale02@gmail.com")
 DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL",
-    default='"Aniket.ProjectMate" <noreply@projectmate.local>',
+    default=f'"Aniket.ProjectMate" <{PROJECT_MAIL}>',
 )
+# Cloudflare Email Service. When CLOUDFLARE_API_TOKEN is set, every project email
+# is sent through smtp.mx.cloudflare.net. The visible mailbox stays PROJECT_MAIL.
+CLOUDFLARE_API_TOKEN = env("CLOUDFLARE_API_TOKEN", default="")
+CLOUDFLARE_ACCOUNT_ID = env("CLOUDFLARE_ACCOUNT_ID", default="")
 
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="")
 CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default="")
@@ -291,12 +305,14 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 SESSION_COOKIE_HTTPONLY = True
 CSRF_COOKIE_HTTPONLY = False
+# cloudflared sends this so the public https URL works. Direct localhost
+# requests do not send it, so runserver without a tunnel stays plain http.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 REWARD_POINTS = {
     "attend_class": 50,

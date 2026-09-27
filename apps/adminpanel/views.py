@@ -27,6 +27,7 @@ from django.views.generic import (
 from apps.adminpanel.mixins import AdminRequiredMixin, ModalFormMixin, MessageDeleteMixin
 from apps.adminpanel.forms import (
     AdminLoginForm,
+    JobSearchUserLoginForm,
     AdminForgotPasswordForm,
     FreeClassForm,
     PaidCourseForm,
@@ -109,6 +110,56 @@ class AdminLoginView(LoginView):
         return super().form_invalid(form)
 
 
+class JobSearchUserLoginView(LoginView):
+    template_name = "adminpanel/job_search_login.html"
+    authentication_form = JobSearchUserLoginForm
+    redirect_authenticated_user = False
+
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if getattr(user, "role", "") == "linkedin_search" and user.is_authenticated:
+            return redirect(self._landing(user))
+        if user.is_authenticated and (user.is_staff or user.is_superuser or getattr(user, "role", "") == "admin"):
+            return redirect("adminpanel:dashboard")
+        return super().dispatch(request, *args, **kwargs)
+
+    def _landing(self, user):
+        from apps.linkedin.context_processors import linkedin_access
+
+        return linkedin_access(type("R", (), {"user": user})()).get("li_access", {}).get("landing_url") or reverse(
+            "linkedin:jobs"
+        )
+
+    def get_success_url(self):
+        return self._landing(self.request.user)
+
+    def form_valid(self, form):
+        user = form.get_user()
+        if getattr(user, "role", "") != "linkedin_search":
+            messages.error(self.request, "This page is for JOB search users.")
+            return self.render_to_response(self.get_context_data(form=form))
+        try:
+            access = user.linkedin_search_access
+        except Exception:
+            access = None
+        if not access or not access.is_active:
+            messages.error(self.request, "This JOB search account is not active.")
+            return self.render_to_response(self.get_context_data(form=form))
+        remember = form.cleaned_data.get("remember_me")
+        super().form_valid(form)
+        if remember:
+            self.request.session.set_expiry(timedelta(days=ADMIN_REMEMBER_ME_DAYS))
+        else:
+            self.request.session.set_expiry(0)
+        self.request.session.modified = True
+        messages.success(self.request, f"Welcome, {user.first_name or 'JOB search user'}!")
+        return redirect(self._landing(user))
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Invalid JOB search user credentials.")
+        return super().form_invalid(form)
+
+
 class AdminForgotPasswordView(FormView):
     """Email a temporary password to an admin account; they can change it after login."""
 
@@ -149,7 +200,7 @@ class AdminForgotPasswordView(FormView):
 
             site = SiteSettings.load()
             site_name = getattr(site, "site_name", None) or "Aniket.ProjectMate"
-            contact = getattr(site, "contact_email", "") or "backendbyaniket@gmail.com"
+            contact = getattr(site, "contact_email", "") or settings.PROJECT_MAIL
             name = user.get_full_name() or user.email
             login_url = self.request.build_absolute_uri(reverse("adminpanel:login"))
             change_url = self.request.build_absolute_uri(reverse("adminpanel:password_change"))
@@ -198,12 +249,14 @@ class AdminLogoutView(View):
         return super().dispatch(request, *args, **kwargs)
 
     def _logout(self, request):
+        job_user = getattr(request.user, "role", "") == "linkedin_search"
         logout(request)
         try:
             request.session.flush()
         except Exception:
             pass
-        response = redirect(reverse("adminpanel:login") + "?logged_out=1")
+        login_name = "adminpanel:job_search_login" if job_user else "adminpanel:login"
+        response = redirect(reverse(login_name) + "?logged_out=1")
         patch_cache_control(
             response,
             no_cache=True,
@@ -239,7 +292,7 @@ class AdminPasswordChangeView(AdminRequiredMixin, FormView):
         update_session_auth_hash(self.request, user)
         changed_at = timezone.localtime().strftime("%d %b %Y, %I:%M %p")
         site = SiteSettings.load()
-        contact = getattr(site, "contact_email", "") or "backendbyaniket@gmail.com"
+        contact = getattr(site, "contact_email", "") or settings.PROJECT_MAIL
         name = user.get_full_name() or user.email
         EmailService.send_from_template(
             "password_changed",

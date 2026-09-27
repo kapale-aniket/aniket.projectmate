@@ -39,6 +39,7 @@
       <div class="ap-brand">Aniket.<span>Admin</span></div>
       <nav class="ap-nav" aria-label="Admin">
         {% with url_name=request.resolver_match.url_name ns=request.resolver_match.namespace tab=request.GET.tab %}
+        {% if not li_access.limited %}
         <a href="{% url 'adminpanel:dashboard' %}" class="{% if ns == 'adminpanel' and url_name == 'dashboard' %}active{% endif %}"><i class="fas fa-gauge"></i> <span>Dashboard</span></a>
 
         <div class="ap-menu{% if ns == 'crm' %} has-active is-open{% endif %}" data-ap-menu="crm">
@@ -100,6 +101,7 @@
             <a href="{% url 'adminpanel:content' %}?tab=notifications" class="{% if 'notification' in url_name or url_name == 'content' and tab == 'notifications' %}active{% endif %}"><i class="fas fa-bell"></i> <span>Notifications</span></a>
           </div>
         </div>
+        {% endif %}
 
         <div class="ap-menu{% if ns == 'linkedin' or ns == 'naukri' %} has-active is-open{% endif %}" data-ap-menu="searching">
           <button type="button" class="ap-menu__toggle" data-ap-menu-toggle aria-expanded="false">
@@ -108,11 +110,14 @@
             <i class="fas fa-chevron-right ap-menu__chevron" aria-hidden="true"></i>
           </button>
           <div class="ap-submenu">
-            <a href="{% url 'linkedin:home' %}" class="{% if ns == 'linkedin' %}active{% endif %}"><i class="fab fa-linkedin"></i> <span>LinkedIn</span></a>
+            <a href="{% if li_access.limited %}{{ li_access.landing_url }}{% else %}{% url 'linkedin:home' %}{% endif %}" class="{% if ns == 'linkedin' %}active{% endif %}"><i class="fab fa-linkedin"></i> <span>LinkedIn</span></a>
+            {% if not li_access.limited %}
             <a href="{% url 'naukri:home' %}" class="{% if ns == 'naukri' %}active{% endif %}"><i class="fas fa-briefcase"></i> <span>Naukri</span></a>
+            {% endif %}
           </div>
         </div>
 
+        {% if not li_access.limited %}
         <div class="ap-menu{% if ns == 'adminpanel' and url_name == 'logs' or ns == 'adminpanel' and url_name == 'log_delete' or ns == 'adminpanel' and url_name == 'logs_clear' or ns == 'adminpanel' and url_name == 'email_logs' or ns == 'adminpanel' and url_name == 'reports' or ns == 'adminpanel' and url_name == 'settings' %} has-active is-open{% endif %}" data-ap-menu="system">
           <button type="button" class="ap-menu__toggle" data-ap-menu-toggle aria-expanded="false">
             <i class="fas fa-gear"></i>
@@ -126,6 +131,7 @@
             <a href="{% url 'core:home' %}" target="_blank"><i class="fas fa-globe"></i> <span>View site</span></a>
           </div>
         </div>
+        {% endif %}
         {% endwith %}
       </nav>
       <form method="get" action="{% url 'adminpanel:logout' %}" class="mt-auto p-3">

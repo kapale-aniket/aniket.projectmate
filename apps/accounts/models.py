@@ -39,6 +39,7 @@ class User(AbstractUser):
         STUDENT = "student", "Student"
         INSTRUCTOR = "instructor", "Instructor"
         ADMIN = "admin", "Admin"
+        LINKEDIN_SEARCH = "linkedin_search", "LinkedIn searching"
 
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=20, choices=Role.choices, default=Role.STUDENT)

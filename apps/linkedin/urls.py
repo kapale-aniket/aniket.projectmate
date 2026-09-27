@@ -15,6 +15,7 @@ urlpatterns = [
     path("output/restore/", views.restore_trashed_file, name="restore_trashed_file"),
     path("trash/", views.trash_view, name="trash"),
     path("settings/", views.settings_view, name="settings"),
+    path("settings/users/", views.linkedin_users, name="users"),
     path("download/", views.download_file, name="download"),
     # JSON API
     path("api/task/status/", api_views.api_task_status, name="api_task_status"),

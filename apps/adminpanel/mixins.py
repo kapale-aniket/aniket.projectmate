@@ -17,6 +17,8 @@ class AdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         from django.utils.cache import patch_cache_control
 
         if self.request.user.is_authenticated:
+            if getattr(self.request.user, "role", "") == "linkedin_search":
+                return redirect("linkedin:jobs")
             messages.error(self.request, "Admin access required. Please sign in with an admin account.")
         response = redirect(self.get_login_url())
         patch_cache_control(
