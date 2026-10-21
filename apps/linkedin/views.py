@@ -9,6 +9,7 @@ from django.views.decorators.http import require_GET, require_POST
 from apps.linkedin.forms import (
     ConnectionScraperForm,
     JobScraperForm,
+    PerfectConnectionForm,
     PerfectMatchJobForm,
     PostsScraperForm,
     SessionForm,
@@ -145,6 +146,15 @@ def connection_scraper(request):
         request,
         "adminpanel/linkedin/connections.html",
         _scraper_context(request, ConnectionScraperForm, ScraperTask.TASK_CONNECTION),
+    )
+
+
+@_admin_required
+def perfect_connection_scraper(request):
+    return render(
+        request,
+        "adminpanel/linkedin/perfect_connection.html",
+        _scraper_context(request, PerfectConnectionForm, ScraperTask.TASK_PERFECT_CONNECTION),
     )
 
 
@@ -294,6 +304,7 @@ ASSIGNABLE_TABS = [
     ("jobs", "Jobs"),
     ("perfect_match", "Perfect Match"),
     ("connections", "Connections"),
+    ("perfect_connection", "Perfect Connection"),
     ("posts", "Posts"),
     ("output", "Output"),
     ("logs", "Logs"),

@@ -271,6 +271,54 @@ class ConnectionScraperForm(forms.Form):
         }
 
 
+class PerfectConnectionForm(forms.Form):
+    max_connections_per_run = forms.IntegerField(
+        min_value=0, max_value=2000, initial=0, required=False,
+        widget=forms.NumberInput(attrs={"class": "form-control li-input-num"}),
+    )
+    people_json = forms.CharField(required=False, widget=forms.HiddenInput())
+
+    def clean(self):
+        import json
+
+        cleaned = super().clean()
+        raw = cleaned.get("people_json") or "[]"
+        try:
+            people = raw if isinstance(raw, list) else json.loads(raw or "[]")
+        except json.JSONDecodeError:
+            raise forms.ValidationError("The name sheet could not be read. Upload it again.")
+        rows = []
+        for person in people:
+            if not isinstance(person, dict):
+                continue
+            name = str(person.get("name") or "").strip()
+            if len(name.split()) < 2:
+                continue
+            rows.append(
+                {
+                    "name": name,
+                    "raw_name": str(person.get("raw_name") or name).strip(),
+                    "college": str(person.get("college") or "").strip(),
+                    "district": str(person.get("district") or "").strip(),
+                    "department": str(person.get("department") or "").strip(),
+                    "designation": str(person.get("designation") or "").strip(),
+                    "university": str(person.get("university") or "").strip(),
+                }
+            )
+        if not rows:
+            raise forms.ValidationError("Upload a sheet that contains at least one name.")
+        cleaned["people"] = rows
+        return cleaned
+
+    def cleaned_config(self):
+        data = self.cleaned_data
+        return {
+            "people": data["people"],
+            "max_connections_per_run": int(data.get("max_connections_per_run") or 0),
+            "headless": True,
+        }
+
+
 class PostsScraperForm(forms.Form):
     max_scroll_rounds = forms.IntegerField(
         min_value=1, max_value=100, initial=30,

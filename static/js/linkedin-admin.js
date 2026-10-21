@@ -160,6 +160,13 @@
         skip_searches: pmSkip,
       };
     }
+    if (taskType === "perfect_connection") {
+      return {
+        people: window.PMPerfectPeople || [],
+        max_connections_per_run: parseInt(fd.get("max_connections_per_run") || "0", 10),
+        headless: true,
+      };
+    }
     if (taskType === "connection") {
       return {
         keywords: lines(fd.get("keywords")),
@@ -219,12 +226,38 @@
     if (window.PMLinkedInLivePreview) window.PMLinkedInLivePreview(active);
   }
 
+  var sentTracker = { taskId: null, count: 0 };
+
+  function connectionSentCount(data) {
+    var id = data.id || null;
+    if (sentTracker.taskId !== id) {
+      sentTracker.taskId = id;
+      sentTracker.count = 0;
+    }
+    var count = Number(data.connections_sent);
+    if (!isFinite(count) || count < 0) count = 0;
+    (data.logs || []).forEach(function (line) {
+      var match = String(line.message || "").match(/sent\s+(\d+)\s+connection/i);
+      if (match) count = Math.max(count, parseInt(match[1], 10));
+    });
+    if (count > sentTracker.count) sentTracker.count = count;
+    return sentTracker.count;
+  }
+
   function updateProgress(data) {
     if (!data) return;
     setText("liKeyword", data.keyword || "—");
     setText("liLocation", data.location || "—");
     setText("liPage", data.page != null ? data.page : "—");
-    var found = data.jobs_found || data.connections_sent || data.posts_checked || 0;
+    var kind = data.task_type || "";
+    var found = 0;
+    if (kind === "perfect_connection" || kind === "connection") {
+      found = connectionSentCount(data);
+    } else if (kind === "posts") {
+      found = Number(data.posts_checked || 0);
+    } else {
+      found = Number(data.jobs_found || 0);
+    }
     setText("liFound", found);
     setText("liElapsed", data.elapsed || "00:00:00");
     var bar = document.getElementById("liProgressBar");

@@ -60,6 +60,7 @@ def task_page_url(task_type):
         ScraperTask.TASK_JOB: "/admin/linkedin/jobs/",
         ScraperTask.TASK_PERFECT_MATCH: "/admin/linkedin/perfect-match/",
         ScraperTask.TASK_CONNECTION: "/admin/linkedin/connections/",
+        ScraperTask.TASK_PERFECT_CONNECTION: "/admin/linkedin/perfect-connection/",
         ScraperTask.TASK_POSTS: "/admin/linkedin/posts/",
         ScraperTask.TASK_SESSION: "/admin/linkedin/session/",
     }

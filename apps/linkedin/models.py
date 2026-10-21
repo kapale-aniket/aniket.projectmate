@@ -7,6 +7,7 @@ class ScraperTask(models.Model):
     TASK_JOB = "job"
     TASK_PERFECT_MATCH = "perfect_match"
     TASK_CONNECTION = "connection"
+    TASK_PERFECT_CONNECTION = "perfect_connection"
     TASK_POSTS = "posts"
     TASK_SESSION = "session"
 
@@ -14,6 +15,7 @@ class ScraperTask(models.Model):
         (TASK_JOB, "Job Scraper"),
         (TASK_PERFECT_MATCH, "Perfect Match Job Search"),
         (TASK_CONNECTION, "Connection Scraper"),
+        (TASK_PERFECT_CONNECTION, "Perfect Connection Search"),
         (TASK_POSTS, "Posts Scraper"),
         (TASK_SESSION, "LinkedIn Session"),
     ]

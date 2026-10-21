@@ -232,6 +232,16 @@ def _run_connection(task):
     run(keywords=keywords or None, locations=locations or None)
 
 
+def _run_perfect_connection(task):
+    from connections.perfect_connection import run
+
+    config = task.config or {}
+    run(
+        people=config.get("people") or [],
+        max_connections=config.get("max_connections_per_run") or 0,
+    )
+
+
 def _run_posts(task):
     from posts.post_scan import run
 
@@ -270,6 +280,7 @@ def run_task(task_id):
         ScraperTask.TASK_JOB: _run_job,
         ScraperTask.TASK_PERFECT_MATCH: _run_perfect_match,
         ScraperTask.TASK_CONNECTION: _run_connection,
+        ScraperTask.TASK_PERFECT_CONNECTION: _run_perfect_connection,
         ScraperTask.TASK_POSTS: _run_posts,
         ScraperTask.TASK_SESSION: _run_session,
     }

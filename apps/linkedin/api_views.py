@@ -9,6 +9,7 @@ from django.views.decorators.http import require_GET, require_POST
 from apps.linkedin.forms import (
     ConnectionScraperForm,
     JobScraperForm,
+    PerfectConnectionForm,
     PerfectMatchJobForm,
     PostsScraperForm,
 )
@@ -108,6 +109,7 @@ def api_task_start(request):
         ScraperTask.TASK_JOB: (JobScraperForm, _job_config_from_api),
         ScraperTask.TASK_PERFECT_MATCH: (PerfectMatchJobForm, _perfect_match_config_from_api),
         ScraperTask.TASK_CONNECTION: (ConnectionScraperForm, _connection_config_from_api),
+        ScraperTask.TASK_PERFECT_CONNECTION: (PerfectConnectionForm, _perfect_connection_config_from_api),
         ScraperTask.TASK_POSTS: (PostsScraperForm, _posts_config_from_api),
     }
 
@@ -131,7 +133,8 @@ def api_task_start(request):
         task_config = form.cleaned_config()
         if task_type in (ScraperTask.TASK_JOB, ScraperTask.TASK_PERFECT_MATCH):
             task_config["skip_searches"] = config.get("skip_searches") or []
-        persist_run_config_to_settings(task_type, task_config)
+        if task_type != ScraperTask.TASK_PERFECT_CONNECTION:
+            persist_run_config_to_settings(task_type, task_config)
         task = start_task(task_type, config=task_config, run_in_background=True)
         return JsonResponse(
             {
@@ -182,6 +185,21 @@ def _perfect_match_config_from_api(config):
         "skip_searches": config.get("skip_searches") or [],
         # Kept for checklist compatibility; cleaned_config rebuilds from skills.
         "keywords": [search_query] if search_query else [],
+    }
+
+
+def _perfect_connection_config_from_api(config):
+    import json
+
+    people = config.get("people") or []
+    if isinstance(people, str):
+        try:
+            people = json.loads(people or "[]")
+        except json.JSONDecodeError:
+            people = []
+    return {
+        "people_json": json.dumps(people),
+        "max_connections_per_run": config.get("max_connections_per_run") or 0,
     }
 
 
@@ -587,6 +605,42 @@ def api_permanent_delete_file(request):
             },
             status=409,
         )
+
+
+@_admin_api
+@require_POST
+def api_perfect_connection_preview(request):
+    upload = request.FILES.get("sheet")
+    if not upload:
+        return JsonResponse({"ok": False, "message": "Choose an Excel file."}, status=400)
+    name = (upload.name or "").lower()
+    if not name.endswith(".xlsx"):
+        return JsonResponse({"ok": False, "message": "Upload an .xlsx file."}, status=400)
+    if upload.size > 8 * 1024 * 1024:
+        return JsonResponse({"ok": False, "message": "That file is larger than 8 MB."}, status=400)
+    from apps.linkedin.services.faculty_sheet import people_from_workbook
+
+    try:
+        people = people_from_workbook(upload.read())
+    except Exception:
+        return JsonResponse({"ok": False, "message": "Could not read that workbook."}, status=400)
+    if not people:
+        return JsonResponse(
+            {
+                "ok": False,
+                "message": "No names found. The sheet needs a Faculty Name or Name column.",
+            },
+            status=400,
+        )
+    sample = [
+        {
+            "name": person["name"],
+            "college": person.get("college") or "",
+            "district": person.get("district") or "",
+        }
+        for person in people[:8]
+    ]
+    return JsonResponse({"ok": True, "count": len(people), "sample": sample, "people": people})
 
 
 def _timesince(dt):

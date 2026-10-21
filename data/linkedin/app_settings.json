@@ -149,7 +149,7 @@
       "AJAX"
     ],
     "experience": "fresher",
-    "min_skills_match": 5,
+    "min_skills_match": 3,
     "locations": [
       "Bengaluru",
       "Hyderabad",
@@ -174,15 +174,12 @@
   },
   "connection": {
     "keywords": [
-      "python team lead",
       "hod computer science"
     ],
     "locations": [
-      "pune",
-      "hyderabad",
-      "kolhapur"
+      "pune"
     ],
-    "max_connections_per_run": 400,
+    "max_connections_per_run": 500,
     "max_pages": 500,
     "min_delay": 1,
     "max_delay": 2,

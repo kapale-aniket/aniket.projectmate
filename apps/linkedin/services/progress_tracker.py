@@ -53,6 +53,19 @@ def parse_log_progress(task, message):
     if total_match:
         progress["jobs_found"] = int(total_match.group(1))
 
+    person_match = re.search(
+        r"searching person (\d+)/(\d+):\s*(.+?)\s*\|\s*(.*)$",
+        message.strip(),
+        re.IGNORECASE,
+    )
+    if person_match:
+        done = int(person_match.group(1))
+        total = int(person_match.group(2)) or 1
+        progress["keyword"] = person_match.group(3).strip()
+        progress["location"] = person_match.group(4).strip()
+        progress["page"] = f"{done}/{total}"
+        progress["percent"] = min(99, int(done * 100 / total))
+
     conn_match = re.search(r"sent (\d+) connection", msg)
     if conn_match:
         progress["connections_sent"] = int(conn_match.group(1))
@@ -222,6 +235,18 @@ def get_live_progress(task):
             }
         )
 
+    elif task_type == ScraperTask.TASK_PERFECT_CONNECTION:
+        people = config.get("people") or []
+        progress.setdefault("keyword", "Waiting for the next name")
+        progress.setdefault("location", "")
+        try:
+            progress["connections_sent"] = max(0, int(progress.get("connections_sent") or 0))
+        except (TypeError, ValueError):
+            progress["connections_sent"] = 0
+        progress.pop("jobs_found", None)
+        if people and "percent" not in progress and task.status == ScraperTask.STATUS_RUNNING:
+            progress["percent"] = 1
+
     elif task_type == ScraperTask.TASK_CONNECTION:
         progress.setdefault("keyword", ", ".join(config.get("keywords") or [])[:80])
         progress.setdefault("location", ", ".join(config.get("locations") or [])[:80])
@@ -243,13 +268,23 @@ def get_live_progress(task):
     return progress
 
 
+def _sent_count(value):
+    try:
+        return max(0, int(value or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def update_task_progress(task, message):
     progress = parse_log_progress(task, message)
     if not progress:
         return
     merged = dict(task.progress or {})
+    previous_sent = _sent_count(merged.get("connections_sent"))
     merged.update(progress)
+    merged["connections_sent"] = max(previous_sent, _sent_count(merged.get("connections_sent")))
     live = get_live_progress(task)
     merged.update({k: v for k, v in live.items() if k not in merged or merged[k] in (None, 0, "-")})
+    merged["connections_sent"] = max(previous_sent, _sent_count(merged.get("connections_sent")))
     task.progress = merged
     task.save(update_fields=["progress"])

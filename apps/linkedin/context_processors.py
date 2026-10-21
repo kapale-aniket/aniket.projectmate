@@ -7,6 +7,7 @@ TAB_KEYS = (
     "jobs",
     "perfect_match",
     "connections",
+    "perfect_connection",
     "posts",
     "output",
     "logs",
